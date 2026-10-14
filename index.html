@@ -267,6 +267,13 @@ const overlaps=(s1,e1,s2,e2)=>s1<e2&&s2<e1;
 const svc=id=>services.find(s=>s.id==id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function waLink(msg){const n=(cfg.whatsapp||'').replace(/\D/g,'');return n?('https://wa.me/55'+n+(msg?'?text='+encodeURIComponent(msg):'')):'#';}
+function waClient(phone,msg){
+  let n=String(phone||'').replace(/\D/g,'');
+  if(!n)return '#';
+  if(n.length===10||n.length===11)n='55'+n;
+  if(!n.startsWith('55'))return '#';
+  return 'https://wa.me/'+n+(msg?'?text='+encodeURIComponent(msg):'');
+}
 
 /* ============ BOOT: carrega dados do banco ============ */
 async function boot(){
@@ -398,7 +405,7 @@ function renderTabAg(){
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waLink('Olá '+b.name+'! Seu horário na Alfa Barbearia está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'.')+'">WhatsApp</a>'
+      +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waClient(b.phone,'Olá '+b.name+'! Aqui é da Alfa Barbearia. Seu horário está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'. Qualquer imprevisto, me avise!')+'">WhatsApp</a>'
       +'<button class="btn btn-outline" style="padding:7px 14px;font-size:13px" onclick="reschedule('+b.id+')">Remarcar</button>'
       +'<button class="btn btn-danger" onclick="cancelBk('+b.id+')">Cancelar</button></div></div>';
   });
