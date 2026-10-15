@@ -324,19 +324,13 @@ function renderSlots(){
   const s=svc(document.getElementById('bkService').value);
   const start=toMin(cfg.start),end=toMin(cfg.end);
   const dayBk=(bookings||[]).filter(b=>b.date===date);
-  /* GRADE DINÂMICA: passo fino de 5min para todos os serviços.
-     O encaixe automático (blockUntil) espaça os horários pela duração do
-     serviço — nenhum horário oferecido se sobrepõe a outro nem a um
-     agendamento existente, e todos os vãos da agenda são aproveitados. */
-  const step=5;
+  const endsAt={},startsAt={};
+  dayBk.forEach(b=>{const bs=toMin(b.time);endsAt[bs+b.dur]=true;startsAt[bs]=true;});
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
-  let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
-  for(let t=start;t<=end;t+=step){
-    /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
-    const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
-    const off=hit||t<blockUntil;
-    if(!off)blockUntil=t+s.dur;
+  for(let t=start;t<=end;t+=cfg.slotMin){
+    /* indisponível apenas a partir do horário marcado (nunca antes) */
+    const off=dayBk.some(b=>{const bs=toMin(b.time);return t>=bs&&t<bs+b.dur;});
     grid.push({t,off});
   }
   const recSet={};
