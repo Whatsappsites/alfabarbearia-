@@ -64,7 +64,7 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 .slot.off:hover{border-color:var(--line)}
 .slot-empty{color:var(--muted);font-size:14px;padding:8px 0}
 .slot.rec{border-color:var(--gold);background:rgba(212,175,55,.18);font-weight:700}
-.slot-rec-hint{color:var(--gold-light);font-size:13px;margin-top:10px;font-weight:600}
+.slot-rec-hint{color:var(--gold-light);font-size:13px;margin-top:12px;font-weight:600;grid-column:1 / -1}
 /* CONFIRM */
 .confirm-box{text-align:center;padding:20px}
 .confirm-box .check{font-size:64px;color:var(--gold)}
@@ -163,7 +163,7 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
       <input type="text" id="bkName" placeholder="Nome completo" maxlength="60">
       <label>Seu WhatsApp</label>
       <input type="tel" id="bkPhone" placeholder="(00) 90000-0000" maxlength="16">
-      <p style="color:var(--muted);font-size:12px;margin-top:6px">📌 1 agendamento ativo por cliente · até 7 dias de antecedência · mínimo de 2h de aviso</p>
+      
       <div id="bkError"></div>
       <br>
       <button class="btn btn-gold" style="width:100%" onclick="submitBooking()">CONFIRMAR AGENDAMENTO</button>
@@ -324,11 +324,8 @@ function renderSlots(){
   const s=svc(document.getElementById('bkService').value);
   const start=toMin(cfg.start),end=toMin(cfg.end);
   const dayBk=(bookings||[]).filter(b=>b.date===date);
-  const isToday=date===todayISO();
-  const nw=new Date();const nowMin=nw.getHours()*60+nw.getMinutes();
   let any=false,firstAvail=true;
   for(let t=start;t+s.dur<=end;t+=cfg.slotMin){
-    if(isToday&&t<nowMin+120)continue;
     const off=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
     const d=document.createElement('div');
     d.className='slot'+(off?' off':'');
@@ -358,9 +355,6 @@ async function submitBooking(){
   if(!date)return fail('Selecione a data do atendimento.');
   if(date<todayISO())return fail('Não é possível agendar em datas passadas.');
   if(!cfg.days[new Date(date+'T12:00:00').getDay()])return fail('Não atendemos neste dia da semana.');
-  const mxD=new Date();mxD.setDate(mxD.getDate()+7);
-  const mxISO=mxD.getFullYear()+'-'+String(mxD.getMonth()+1).padStart(2,'0')+'-'+String(mxD.getDate()).padStart(2,'0');
-  if(date>mxISO)return fail('Agendamentos só podem ser feitos com até 7 dias de antecedência.');
   if(!selSlot)return fail('Escolha um horário disponível.');
   if(!name)return fail('Informe seu nome.');
   if(!phone)return fail('Informe seu WhatsApp com DDD.');
@@ -368,11 +362,6 @@ async function submitBooking(){
   /* busca a versão mais recente dos agendamentos antes de gravar */
   const latest=await dbGet('/bookings');
   const list=Array.isArray(latest)?latest:(latest?Object.values(latest):[]);
-  const phoneDigits=phone.replace(/\D/g,'');
-  if(list.some(b=>String(b.phone).replace(/\D/g,'')===phoneDigits&&b.date>=todayISO())){
-    savingBk=false;
-    return fail('Você já possui um agendamento ativo. Para mudar, fale com o barbeiro pelo WhatsApp.');
-  }
   const st=toMin(selSlot);
   if(list.some(b=>b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+b.dur))){
     savingBk=false;
@@ -424,8 +413,9 @@ function renderTabAg(){
   let top='';
   if(old>0){
     top='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
-      +'<span class="badge">'+old+' agendamento(s) antigo(s) oculto(s)</span>'
-      +'<button class="btn btn-danger" onclick="clearOld()">Apagar histórico antigo</button></div>';
+      +'<button class="badge" style="cursor:pointer;font-size:13px;padding:8px 16px" onclick="toggleOld()">📁 '+old+' antigo(s) oculto(s) — toque para ver</button>'
+      +'<button class="btn btn-danger" onclick="clearOld()">Apagar histórico</button></div>'
+      +'<div id="oldList" style="display:none"></div>';
   }
   if(!fut.length){
     box.innerHTML=top+'<div class="notice info">Nenhum agendamento futuro. Os atendimentos passados são ocultados automaticamente para não acumular.</div>';
@@ -444,6 +434,22 @@ function renderTabAg(){
       +'<button class="btn btn-danger" onclick="cancelBk('+b.id+')">Cancelar</button></div></div>';
   });
   box.innerHTML=html;
+}
+function toggleOld(){
+  const el=document.getElementById('oldList');
+  if(!el)return;
+  if(el.style.display!=='none'){el.style.display='none';return;}
+  const t=todayISO();
+  const old=bookings.filter(b=>b.date<t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  let last='',html='';
+  old.forEach(b=>{
+    if(b.date!==last){last=b.date;html+='<h3 style="color:var(--muted);margin:18px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>';}
+    html+='<div class="card" style="padding:14px 18px;margin-bottom:10px;opacity:.75">'
+      +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
+      +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div></div>';
+  });
+  el.innerHTML=html||'<div class="notice info">Nenhum agendamento antigo.</div>';
+  el.style.display='block';
 }
 async function clearOld(){
   const oldC=bookings.filter(b=>b.date<todayISO()).length;
