@@ -333,12 +333,13 @@ function renderSlots(){
     grid.push({t,off});
   }
   const recSet={};
-  const firstFree=grid.find(g=>!g.off);
+  const isLunch=t=>{const h=Math.floor(t/60);return h>=12&&h<14;}; /* almoço: 12h às 13h59 (livre, mas sem ⭐) */
+  const firstFree=grid.find(g=>!g.off&&!isLunch(g.t));
   if(firstFree)recSet[firstFree.t]=true; /* 1º horário livre do dia */
-  /* primeiro horário livre APÓS o fim de cada atendimento (nunca antes) */
+  /* primeiro horário livre APÓS o fim de cada atendimento (nunca antes, nunca no almoço) */
   dayBk.forEach(b=>{
     const e=toMin(b.time)+b.dur;
-    const sl=grid.find(g=>!g.off&&g.t>=e);
+    const sl=grid.find(g=>!g.off&&g.t>=e&&!isLunch(g.t));
     if(sl)recSet[sl.t]=true;
   });
   let any=false;
