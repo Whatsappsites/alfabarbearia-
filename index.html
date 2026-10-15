@@ -324,12 +324,20 @@ function renderSlots(){
   const s=svc(document.getElementById('bkService').value);
   const start=toMin(cfg.start),end=toMin(cfg.end);
   const dayBk=(bookings||[]).filter(b=>b.date===date);
+  const endsAt={},startsAt={};
+  dayBk.forEach(b=>{const bs=toMin(b.time);endsAt[bs+b.dur]=true;startsAt[bs]=true;});
   let any=false,firstAvail=true;
-  for(let t=start;t+s.dur<=end;t+=cfg.slotMin){
+  for(let t=start;t<=end;t+=cfg.slotMin){
     const off=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
     const d=document.createElement('div');
     d.className='slot'+(off?' off':'');
-    if(!off&&firstAvail){d.classList.add('rec');d.innerHTML='⭐ '+toHM(t);firstAvail=false;}
+    if(!off){
+      /* recomendado: 1º do dia, logo após um atendimento, ou encaixando antes do próximo */
+      const rec=firstAvail||endsAt[t]||startsAt[t+s.dur];
+      if(rec){d.classList.add('rec');d.innerHTML='⭐ '+toHM(t);}
+      else d.textContent=toHM(t);
+      firstAvail=false;
+    }
     else d.textContent=toHM(t);
     if(!off){d.onclick=()=>{box.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selSlot=toHM(t);};}
     box.appendChild(d);any=true;
@@ -337,7 +345,7 @@ function renderSlots(){
   if(!any){box.innerHTML='<p class="slot-empty">Sem horários disponíveis nesta data.</p>';return;}
   const hint=document.createElement('p');
   hint.className='slot-rec-hint';
-  hint.textContent='💡 O horário com ⭐ é o mais cedo disponível — ajuda a barbearia a atender mais rápido!';
+  hint.textContent='⭐ Horário recomendado';
   box.appendChild(hint);
 }
 
