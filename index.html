@@ -329,7 +329,8 @@ function renderSlots(){
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
   for(let t=start;t<=end;t+=cfg.slotMin){
-    const off=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
+    /* indisponível apenas a partir do horário marcado (nunca antes) */
+    const off=dayBk.some(b=>{const bs=toMin(b.time);return t>=bs&&t<bs+b.dur;});
     grid.push({t,off});
   }
   const recSet={};
