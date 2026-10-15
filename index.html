@@ -332,8 +332,8 @@ function renderSlots(){
     const d=document.createElement('div');
     d.className='slot'+(off?' off':'');
     if(!off){
-      /* recomendado: 1º do dia, logo após um atendimento, ou encaixando antes do próximo */
-      const rec=firstAvail||endsAt[t]||startsAt[t+s.dur];
+      /* recomendado: 1º do dia ou logo APÓS um atendimento (nunca antes) */
+      const rec=firstAvail||endsAt[t];
       if(rec){d.classList.add('rec');d.innerHTML='⭐ '+toHM(t);}
       else d.textContent=toHM(t);
       firstAvail=false;
