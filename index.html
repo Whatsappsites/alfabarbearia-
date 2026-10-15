@@ -338,7 +338,7 @@ function renderSlots(){
   const grid=[];
   let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
   for(let t=start;t<=end;t+=step){
-    if(dow>=1&&dow<=5&&t>=720&&t<780)continue; /* ⛔ almoço seg-sex: 12h às 13h não aparece na grade */
+    if(dow>=1&&dow<=5&&t>=720&&t<840)continue; /* ⛔ almoço seg-sex: 12h às 14h não aparece na grade */
     /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
     const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
     const off=hit||t<blockUntil;
@@ -399,7 +399,7 @@ async function submitBooking(){
   const list=Array.isArray(latest)?latest:(latest?Object.values(latest):[]);
   const st=toMin(selSlot);
   const dowBk=new Date(date+'T12:00:00').getDay();
-  if(dowBk>=1&&dowBk<=5&&st>=720&&st<780){savingBk=false;return fail('⛔ Almoço: não atendemos das 12h às 13h de segunda a sexta.');}
+  if(dowBk>=1&&dowBk<=5&&st>=720&&st<840){savingBk=false;return fail('⛔ Almoço: não atendemos das 12h às 14h de segunda a sexta.');}
   if(list.some(b=>b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+b.dur))){
     savingBk=false;
     bookings=list;
