@@ -324,13 +324,15 @@ function renderSlots(){
   const s=svc(document.getElementById('bkService').value);
   const start=toMin(cfg.start),end=toMin(cfg.end);
   const dayBk=(bookings||[]).filter(b=>b.date===date);
-  const endsAt={},startsAt={};
-  dayBk.forEach(b=>{const bs=toMin(b.time);endsAt[bs+b.dur]=true;startsAt[bs]=true;});
+  /* GRADE DINÂMICA: serviços curtos (até 30min) usam passo de 5min para
+     aproveitar todos os espaços entre agendamentos; serviços longes mantêm
+     o intervalo padrão configurado no painel */
+  const step=s.dur<=30?5:cfg.slotMin;
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
-  for(let t=start;t<=end;t+=cfg.slotMin){
-    /* indisponível apenas a partir do horário marcado (nunca antes) */
-    const off=dayBk.some(b=>{const bs=toMin(b.time);return t>=bs&&t<bs+b.dur;});
+  for(let t=start;t<=end;t+=step){
+    /* livre apenas se o serviço INTEIRO cabe sem encostar em nenhum agendamento */
+    const off=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
     grid.push({t,off});
   }
   const recSet={};
