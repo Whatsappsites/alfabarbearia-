@@ -320,17 +320,27 @@ function renderSlots(){
   const date=document.getElementById('bkDate').value;
   if(!date){box.innerHTML='<p class="slot-empty">Selecione uma data para ver os horários.</p>';return;}
   const dow=new Date(date+'T12:00:00').getDay();
-  if(!cfg.days[dow]){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
-  const s=svc(document.getElementById('bkService').value);
-  const start=toMin(cfg.start),end=toMin(cfg.end);
-  const dayBk=(bookings||[]).filter(b=>b.date===date);
-  const endsAt={},startsAt={};
-  dayBk.forEach(b=>{const bs=toMin(b.time);endsAt[bs+b.dur]=true;startsAt[bs]=true;});
+  const daysOpen=(Array.isArray(cfg.days)&&cfg.days.length===7)?cfg.days:[1,1,1,1,1,1,0];
+  if(!daysOpen[dow]){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
+  const s=svc(document.getElementById('bkService').value)||{dur:40,name:'Corte'};
+  let start=toMin(cfg.start||''),end=toMin(cfg.end||'');
+  if(isNaN(start))start=480;
+  if(isNaN(end))end=1140;
+  if(end<start)end=start;
+  const dayBk=(bookings||[]).filter(b=>b&&b.date===date&&!isNaN(toMin(b.time||''))&&b.dur>0);
+  /* GRADE DINÂMICA: passo fino de 5min para todos os serviços.
+     O encaixe automático (blockUntil) espaça os horários pela duração do
+     serviço — nenhum horário oferecido se sobrepõe a outro nem a um
+     agendamento existente, e todos os vãos da agenda são aproveitados. */
+  const step=5;
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
-  for(let t=start;t<=end;t+=cfg.slotMin){
-    /* indisponível apenas a partir do horário marcado (nunca antes) */
-    const off=dayBk.some(b=>{const bs=toMin(b.time);return t>=bs&&t<bs+b.dur;});
+  let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
+  for(let t=start;t<=end;t+=step){
+    /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
+    const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
+    const off=hit||t<blockUntil;
+    if(!off)blockUntil=t+s.dur;
     grid.push({t,off});
   }
   const recSet={};
