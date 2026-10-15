@@ -328,11 +328,12 @@ function renderSlots(){
   if(isNaN(end))end=1140;
   if(end<start)end=start;
   const dayBk=(bookings||[]).filter(b=>b&&b.date===date&&!isNaN(toMin(b.time||''))&&b.dur>0);
-  /* GRADE DINÂMICA: passo fino de 5min para todos os serviços.
-     O encaixe automático (blockUntil) espaça os horários pela duração do
-     serviço — nenhum horário oferecido se sobrepõe a outro nem a um
-     agendamento existente, e todos os vãos da agenda são aproveitados. */
-  const step=5;
+  /* GRADE DINÂMICA: passo ajustado à duração do serviço — múltiplo maior
+     de 20/10/5 que divide a duração. Ex.: Corte(40) e Corte+Barba(60) usam
+     grade de 20min (visual limpo); Barba(30)/Luzes(90) de 10min;
+     Sobrancelha(15) de 5min. O encaixe automático (blockUntil) espaça os
+     horários pela duração — nada se sobrepõe e os vãos são aproveitados. */
+  const step=s.dur%20===0?20:(s.dur%10===0?10:5);
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
   let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
@@ -341,7 +342,7 @@ function renderSlots(){
     const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
     const off=hit||t<blockUntil;
     if(!off)blockUntil=t+s.dur;
-    grid.push({t,off});
+    grid.push({t,off,hit});
   }
   const recSet={};
   const isLunch=t=>{const h=Math.floor(t/60);return h>=12&&h<14;}; /* almoço: 12h às 13h59 (livre, mas sem ⭐) */
@@ -355,6 +356,7 @@ function renderSlots(){
   });
   let any=false;
   grid.forEach(g=>{
+    if(g.off&&!g.hit)return; /* esconde riscados de espaçamento: tela limpa, só aparecem livres e horários ocupados de verdade */
     const d=document.createElement('div');
     d.className='slot'+(g.off?' off':'');
     if(!g.off){
