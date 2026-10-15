@@ -596,6 +596,22 @@ async function saveCfg(){
 /* ============ INIT ============ */
 document.getElementById('bkService').addEventListener('change',renderSlots);
 boot();
+
+/* ============ ATUALIZAÇÃO AUTOMÁTICA (quase tempo real) ============ */
+/* Recarrega os agendamentos do Firebase sem precisar dar F5:
+   - a cada 30 segundos
+   - quando o cliente volta para a aba/janela do site */
+async function refreshBookings(){
+  const data=await dbGet('/');
+  if(!data)return;
+  if(Array.isArray(data.bookings)){
+    bookings=data.bookings;
+    renderSlots(); /* atualiza a grade na hora, se o cliente estiver nela */
+    if(typeof admOk!=='undefined'&&admOk)renderAdmin(); /* atualiza o painel do barbeiro se estiver aberto */
+  }
+}
+setInterval(refreshBookings,30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshBookings();});
 </script>
 </body>
 </html>
