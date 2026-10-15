@@ -326,22 +326,34 @@ function renderSlots(){
   const dayBk=(bookings||[]).filter(b=>b.date===date);
   const endsAt={},startsAt={};
   dayBk.forEach(b=>{const bs=toMin(b.time);endsAt[bs+b.dur]=true;startsAt[bs]=true;});
-  let any=false,firstAvail=true;
+  /* monta a grade primeiro, depois calcula as estrelas */
+  const grid=[];
   for(let t=start;t<=end;t+=cfg.slotMin){
     const off=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
-    const d=document.createElement('div');
-    d.className='slot'+(off?' off':'');
-    if(!off){
-      /* recomendado: 1º do dia ou logo APÓS um atendimento (nunca antes) */
-      const rec=firstAvail||endsAt[t];
-      if(rec){d.classList.add('rec');d.innerHTML='⭐ '+toHM(t);}
-      else d.textContent=toHM(t);
-      firstAvail=false;
-    }
-    else d.textContent=toHM(t);
-    if(!off){d.onclick=()=>{box.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selSlot=toHM(t);};}
-    box.appendChild(d);any=true;
+    grid.push({t,off});
   }
+  const recSet={};
+  const firstFree=grid.find(g=>!g.off);
+  if(firstFree)recSet[firstFree.t]=true; /* 1º horário livre do dia */
+  /* primeiro horário livre APÓS o fim de cada atendimento (nunca antes) */
+  dayBk.forEach(b=>{
+    const e=toMin(b.time)+b.dur;
+    const sl=grid.find(g=>!g.off&&g.t>=e);
+    if(sl)recSet[sl.t]=true;
+  });
+  let any=false;
+  grid.forEach(g=>{
+    const d=document.createElement('div');
+    d.className='slot'+(g.off?' off':'');
+    if(!g.off){
+      if(recSet[g.t]){d.classList.add('rec');d.innerHTML='⭐ '+toHM(g.t);}
+      else d.textContent=toHM(g.t);
+      d.onclick=()=>{box.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selSlot=toHM(g.t);};
+      any=true;
+    }
+    else d.textContent=toHM(g.t);
+    box.appendChild(d);
+  });
   if(!any){box.innerHTML='<p class="slot-empty">Sem horários disponíveis nesta data.</p>';return;}
   const hint=document.createElement('p');
   hint.className='slot-rec-hint';
