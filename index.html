@@ -225,8 +225,7 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
         <div class="tab" data-tab="cfg" onclick="showTab('cfg',this)">Configurações</div>
         <div class="tab" onclick="adminLogout()">⏻ Sair</div>
       </div>
-      <div style="display:flex;justify-content:flex-end;margin:0 0 10px"><button id="btnNotif" onclick="enableNotif()" style="background:rgba(232,197,107,.1);border:1px solid var(--gold);color:var(--gold);padding:9px 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer">🔔 Ativar notificações</button></div>
-        <div id="tab-ag"></div>
+      <div id="tab-ag"></div>
       <div id="tab-sv" class="hidden"></div>
       <div id="tab-hr" class="hidden"></div>
       <div id="tab-cfg" class="hidden"></div>
@@ -425,6 +424,8 @@ async function submitBooking(){
   const wa=waLink(decodeURIComponent(msg));
   document.getElementById('doneWa').href=wa;
   if(waWin){try{waWin.location.href=wa;}catch(e){waWin=null;}} /* abre o WhatsApp com a confirmação automaticamente */
+  /* push via ntfy: avisa o barbeiro no iPhone/Android mesmo com tudo fechado */
+  try{fetch('https://ntfy.sh/alfa-barbearia-75',{method:'POST',mode:'no-cors',body:'💈 Novo agendamento — Alfa Barbearia\nCliente: '+name+'\nServiço: '+s.name+'\nData: '+date.split('-').reverse().join('/')+' às '+selSlot+'\nR$ '+s.price.toFixed(2).replace('.',',')});}catch(e){}
   document.getElementById('bookingForm').classList.add('hidden');
   document.getElementById('bookingDone').classList.remove('hidden');
   document.getElementById('bookingDone').scrollIntoView({behavior:'smooth',block:'center'});
@@ -607,7 +608,12 @@ function renderTabCfg(){
     +'<input id="cfgIg" placeholder="https://instagram.com/alfabarbearia" value="'+esc(cfg.instagram)+'">'
     +'<label>Nova senha de acesso</label>'
     +'<input id="cfgPass" type="password" placeholder="Deixe em branco para manter a atual">'
-    +'<br><br><button class="btn btn-gold" onclick="saveCfg()">SALVAR CONFIGURAÇÕES</button><div id="cfgMsg"></div>';
+    +'<br><br><button class="btn btn-gold" onclick="saveCfg()">SALVAR CONFIGURAÇÕES</button><div id="cfgMsg"></div>'
+    +'<hr style="border:none;border-top:1px solid #333;margin:24px 0 16px">'
+    +'<label>Notificações de novo agendamento</label>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 4px"><button id="btnNotif" onclick="enableNotif()" style="background:rgba(232,197,107,.1);border:1px solid var(--gold);color:var(--gold);padding:10px 18px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">🔔 Ativar notificações</button></div>'
+    +'<small style="color:var(--muted)">Avisa neste aparelho quando um cliente agendar (Android/PC, com o painel aberto).</small>';
+  updateNotifBtn();
 }
 async function saveCfg(){
   cfg.whatsapp=document.getElementById('cfgWa').value.replace(/\D/g,'');
