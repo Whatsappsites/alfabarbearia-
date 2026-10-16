@@ -463,7 +463,7 @@ function renderTabAg(){
     top='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
       +'<button class="badge" style="cursor:pointer;font-size:13px;padding:8px 16px" onclick="toggleOld()">📁 '+old+' antigo(s) oculto(s) — toque para ver</button>'
       +'<button class="btn btn-danger" onclick="clearOld()">Apagar histórico</button></div>'
-      +'<div id="oldList" style="display:none"></div>';
+      +'<div id="oldList" style="display:'+(oldOpen?'block':'none')+'"></div>';
   }
   if(!fut.length){
     box.innerHTML=top+'<div class="notice info">Nenhum agendamento futuro. Os atendimentos passados são ocultados automaticamente para não acumular.</div>';
@@ -484,11 +484,19 @@ function renderTabAg(){
       +'<button class="btn btn-danger" onclick="cancelBk('+b.id+')">Cancelar</button></div></div>';
   });
   box.innerHTML=html;
+  if(oldOpen)fillOld();
 }
 function toggleOld(){
+  oldOpen=!oldOpen;
   const el=document.getElementById('oldList');
   if(!el)return;
-  if(el.style.display!=='none'){el.style.display='none';return;}
+  if(!oldOpen){el.style.display='none';return;}
+  fillOld();
+  el.style.display='block';
+}
+function fillOld(){
+  const el=document.getElementById('oldList');
+  if(!el)return;
   const t=todayISO();
   const old=bookings.filter(b=>b.date<t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const totaisOld={};old.forEach(b=>{totaisOld[b.date]=(totaisOld[b.date]||0)+Number(b.price||0);});
@@ -500,7 +508,6 @@ function toggleOld(){
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div></div>';
   });
   el.innerHTML=html||'<div class="notice info">Nenhum agendamento antigo.</div>';
-  el.style.display='block';
 }
 async function clearOld(){
   const oldC=bookings.filter(b=>b.date<todayISO()).length;
@@ -646,7 +653,7 @@ async function refreshBookings(){
   }
 }
 /* ===== notificações de novo agendamento ===== */
-let bkSeen=null;
+let bkSeen=null;let oldOpen=false; /* histórico expandido? mantém aberto entre atualizações */
 function updateNotifBtn(){
   const b=document.getElementById('btnNotif');if(!b)return;
   if(!('Notification' in window)){b.style.display='none';return;}
