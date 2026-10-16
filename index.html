@@ -173,7 +173,7 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
       <div class="check">✓</div>
       <h2 style="margin:14px 0 6px">Agendamento <span class="gold-text">Confirmado!</span></h2>
       <p id="doneMsg" style="color:var(--muted);margin-bottom:24px"></p>
-      <a class="btn btn-gold" id="doneWa" target="_blank" rel="noopener">RECEBER CONFIRMAÇÃO NO WHATSAPP</a>
+      <a class="btn btn-gold" id="doneWa" target="_blank" rel="noopener">SE O WHATSAPP NÃO ABRIR, TOQUE AQUI</a>
       <br><br>
       <a href="#" onclick="resetBooking();return false" style="font-size:14px">Fazer novo agendamento</a>
     </div>
@@ -407,14 +407,17 @@ async function submitBooking(){
     return fail('Este horário acabou de ser ocupado. Escolha outro.');
   }
   const bk={id:Date.now(),serviceId:s.id,service:s.name,price:s.price,dur:s.dur,date,time:selSlot,name,phone};
+  let waWin=null;try{waWin=window.open('about:blank','_blank');}catch(e){} /* abre a aba já no clique para o navegador permitir o redirecionamento depois */
   try{
     await dbPut('/bookings',[...list,bk]);
     bookings=[...list,bk];
-  }catch(e){savingBk=false;netErr();return;}
+  }catch(e){if(waWin)try{waWin.close();}catch(_){}savingBk=false;netErr();return;}
   savingBk=false;
   const msg='✅ *AGENDAMENTO CONFIRMADO — ALFA BARBEARIA*%0A%0A👤 Cliente: '+name+'%0A💈 Serviço: '+s.name+'%0A📅 Data: '+date.split('-').reverse().join('/')+' às '+selSlot+'%0A💰 Valor: R$ '+s.price.toFixed(2).replace('.',',')+'%0A%0AAté breve!';
   document.getElementById('doneMsg').innerHTML='<b style="color:var(--gold)">'+esc(s.name)+'</b> · '+date.split('-').reverse().join('/')+' às <b>'+selSlot+'</b><br>Cliente: '+esc(name);
-  document.getElementById('doneWa').href=waLink(decodeURIComponent(msg));
+  const wa=waLink(decodeURIComponent(msg));
+  document.getElementById('doneWa').href=wa;
+  if(waWin){try{waWin.location.href=wa;}catch(e){waWin=null;}} /* abre o WhatsApp com a confirmação automaticamente */
   document.getElementById('bookingForm').classList.add('hidden');
   document.getElementById('bookingDone').classList.remove('hidden');
   document.getElementById('bookingDone').scrollIntoView({behavior:'smooth',block:'center'});
@@ -459,9 +462,11 @@ function renderTabAg(){
     return;
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const totais={};sorted.forEach(b=>{totais[b.date]=(totais[b.date]||0)+Number(b.price||0);});
+  const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px"><span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:6px 14px;border-radius:999px">💰 Total do dia: <b>R$ '+totais[d].toFixed(2).replace('.',',')+'</b></span></div>';
   let html=top,lastDate='';
   sorted.forEach(b=>{
-    if(b.date!==lastDate){lastDate=b.date;html+='<h3 style="color:var(--gold);margin:22px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>';}
+    if(b.date!==lastDate){lastDate=b.date;html+='<h3 style="color:var(--gold);margin:22px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>'+totalHtml(b.date);}
     html+='<div class="card" style="padding:16px 20px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
@@ -478,9 +483,10 @@ function toggleOld(){
   if(el.style.display!=='none'){el.style.display='none';return;}
   const t=todayISO();
   const old=bookings.filter(b=>b.date<t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const totaisOld={};old.forEach(b=>{totaisOld[b.date]=(totaisOld[b.date]||0)+Number(b.price||0);});
   let last='',html='';
   old.forEach(b=>{
-    if(b.date!==last){last=b.date;html+='<h3 style="color:var(--muted);margin:18px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>';}
+    if(b.date!==last){last=b.date;html+='<h3 style="color:var(--muted);margin:18px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3><div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">💰 Total do dia: <b style="color:var(--gold)">R$ '+totaisOld[b.date].toFixed(2).replace('.',',')+'</b></div>';}
     html+='<div class="card" style="padding:14px 18px;margin-bottom:10px;opacity:.75">'
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div></div>';
