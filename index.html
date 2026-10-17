@@ -471,6 +471,8 @@ function renderTabAg(){
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   /* resumo semanal: total da semana atual + da semana passada (guardado antes da limpeza de segunda) */
+  const agoraT2=Date.now();
+  const foiAtd=b=>new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agoraT2; /* já passou pela cadeira */
   const mSeg=mondayISO();
   const recSem=(bookings||[]).filter(b=>b.date>=mSeg&&foiAtd(b)).reduce((a,b)=>a+Number(b.price||0),0);
   const pendSem=(bookings||[]).filter(b=>b.date>=mSeg&&!foiAtd(b)).reduce((a,b)=>a+Number(b.price||0),0);
