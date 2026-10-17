@@ -470,6 +470,13 @@ function renderTabAg(){
     return;
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  /* resumo semanal: total da semana atual + da semana passada (guardado antes da limpeza de segunda) */
+  const mSeg=mondayISO();
+  const semAtual=(bookings||[]).filter(b=>b.date>=mSeg).reduce((a,b)=>a+Number(b.price||0),0);
+  top='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
+    +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana atual: <b>R$ '+semAtual.toFixed(2).replace('.',',')+'</b></span>'
+    +(lastWeekTotal!=null?'<span class="badge" style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">📆 Semana passada: <b style="color:var(--gold)">R$ '+lastWeekTotal.toFixed(2).replace('.',',')+'</b></span>':'')
+    +'</div>'+top;
   const totais={};sorted.forEach(b=>{totais[b.date]=(totais[b.date]||0)+Number(b.price||0);});
   const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px"><span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:6px 14px;border-radius:999px">💰 Total do dia: <b>R$ '+totais[d].toFixed(2).replace('.',',')+'</b></span></div>';
   let html=top,lastDate='';
@@ -645,15 +652,31 @@ boot();
 async function refreshBookings(){
   const data=await dbGet('/');
   if(!data)return;
+  lastWeekTotal=(data.lastWeek&&typeof data.lastWeek.total==='number')?data.lastWeek.total:null;
   if(Array.isArray(data.bookings)){
     bookings=data.bookings;
     checkNewBk();
+    /* limpeza semanal: a cada segunda-feira o histórico anterior some sozinho */
+    if(typeof admOk!=='undefined'&&admOk){
+      const m=mondayISO();
+      const gone=bookings.filter(b=>b.date<m);
+      if(gone.length){
+        const kept=bookings.filter(b=>b.date>=m);
+        try{
+          await dbPut('/bookings',kept);
+          const tot=gone.reduce((a,b)=>a+Number(b.price||0),0);
+          dbPut('/lastWeek',{total:tot,week:m}).catch(()=>{}); /* guarda o total da semana antes do histórico sumir */
+          bookings=kept;
+        }catch(e){}
+      }
+    }
     renderSlots(); /* atualiza a grade na hora, se o cliente estiver nela */
     if(typeof admOk!=='undefined'&&admOk)renderAdmin(); /* atualiza o painel do barbeiro se estiver aberto */
   }
 }
+function mondayISO(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 /* ===== notificações de novo agendamento ===== */
-let bkSeen=null;let oldOpen=false; /* histórico expandido? mantém aberto entre atualizações */
+let bkSeen=null;let oldOpen=false;let lastWeekTotal=null; /* histórico expandido? mantém aberto entre atualizações */
 function updateNotifBtn(){
   const b=document.getElementById('btnNotif');if(!b)return;
   if(!('Notification' in window)){b.style.display='none';return;}
