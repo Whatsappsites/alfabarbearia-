@@ -481,8 +481,6 @@ function renderTabAg(){
     +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
     +(lastWeekTotal!=null?'<span class="badge" style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">📆 Semana passada: <b style="color:var(--gold)">R$ '+lastWeekTotal.toFixed(2).replace('.',',')+'</b></span>':'')
     +'</div>'+top;
-  const agoraT=Date.now();
-  const foiAtd=b=>new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agoraT; /* já passou pela cadeira */
   const rec={},pend={};
   sorted.forEach(b=>{const t=foiAtd(b)?rec:pend;t[b.date]=(t[b.date]||0)+Number(b.price||0);});
   const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px;flex-wrap:wrap">'
