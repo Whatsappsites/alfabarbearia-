@@ -472,18 +472,29 @@ function renderTabAg(){
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   /* resumo semanal: total da semana atual + da semana passada (guardado antes da limpeza de segunda) */
   const mSeg=mondayISO();
-  const semAtual=(bookings||[]).filter(b=>b.date>=mSeg).reduce((a,b)=>a+Number(b.price||0),0);
+  const recSem=(bookings||[]).filter(b=>b.date>=mSeg&&foiAtd(b)).reduce((a,b)=>a+Number(b.price||0),0);
+  const pendSem=(bookings||[]).filter(b=>b.date>=mSeg&&!foiAtd(b)).reduce((a,b)=>a+Number(b.price||0),0);
   top='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
-    +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana atual: <b>R$ '+semAtual.toFixed(2).replace('.',',')+'</b></span>'
+    +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana — recebido: <b>R$ '+recSem.toFixed(2).replace('.',',')+'</b></span>'
+    +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
     +(lastWeekTotal!=null?'<span class="badge" style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">📆 Semana passada: <b style="color:var(--gold)">R$ '+lastWeekTotal.toFixed(2).replace('.',',')+'</b></span>':'')
     +'</div>'+top;
-  const totais={};sorted.forEach(b=>{totais[b.date]=(totais[b.date]||0)+Number(b.price||0);});
-  const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px"><span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:6px 14px;border-radius:999px">💰 Total do dia: <b>R$ '+totais[d].toFixed(2).replace('.',',')+'</b></span></div>';
+  const agoraT=Date.now();
+  const foiAtd=b=>new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agoraT; /* já passou pela cadeira */
+  const rec={},pend={};
+  sorted.forEach(b=>{const t=foiAtd(b)?rec:pend;t[b.date]=(t[b.date]||0)+Number(b.price||0);});
+  const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px;flex-wrap:wrap">'
+    +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:6px 14px;border-radius:999px">💰 Recebido: <b>R$ '+(rec[d]||0).toFixed(2).replace('.',',')+'</b></span>'
+    +((pend[d]||0)>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:6px 14px;border-radius:999px">⏳ A receber: R$ '+pend[d].toFixed(2).replace('.',',')+'</span>':'')
+    +'</div>';
   let html=top,lastDate='';
+  const agora=Date.now();
   sorted.forEach(b=>{
     if(b.date!==lastDate){lastDate=b.date;html+='<h3 style="color:var(--gold);margin:22px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>'+totalHtml(b.date);}
-    html+='<div class="card" style="padding:16px 20px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+    const atendido=new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agora; /* horário + duração já passou = cliente já foi atendido */
+    html+='<div class="card" style="padding:16px 20px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'+(atendido?'opacity:.65;border-left:4px solid #2ecc71;':'')+'">'
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
+      +(atendido?' <span class="badge" style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71">✅ Atendido</span>':'')
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
       +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waClient(b.phone,'Olá '+b.name+'! Aqui é da Alfa Barbearia. Seu horário está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'. Qualquer imprevisto, me avise!')+'">WhatsApp</a>'
