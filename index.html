@@ -329,7 +329,8 @@ function renderSlots(){
   const daysOpen=(Array.isArray(cfg.days)&&cfg.days.length===7)?cfg.days:[1,1,1,1,1,1,0];
   if(!daysOpen[dow]){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
   const s=svc(document.getElementById('bkService').value)||{dur:40,name:'Corte'};
-  let start=toMin(cfg.start||''),end=toMin(cfg.end||'');
+  const HrDia=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null; /* horário individual por dia */
+  let start=toMin((HrDia&&HrDia[dow].s)||cfg.start||''),end=toMin((HrDia&&HrDia[dow].e)||cfg.end||'');
   if(isNaN(start))start=480;
   if(isNaN(end))end=1140;
   if(end<start)end=start;
@@ -606,17 +607,20 @@ async function delService(id){
 
 function renderTabHr(){
   const box=document.getElementById('tab-hr');
-  const checks=cfg.days.map((v,i)=>'<label class="day-check"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> '+DAYS[i]+'</label>').join('');
-  box.innerHTML='<div class="notice info">Os horários bloqueados aqui desaparecem automaticamente do agendamento online.</div>'
+  const H=(cfg.hours&&cfg.hours.length===7)?cfg.hours:cfg.days.map(()=>({s:cfg.start,e:cfg.end})); /* compatibilidade: se ainda não tem horário por dia, usa o geral */
+  const checks=cfg.days.map((v,i)=>'<div class="day-check" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap"><label style="min-width:160px;margin:0"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> '+DAYS[i]+'</label><input type="time" id="dayS'+i+'" value="'+(H[i].s||cfg.start)+'" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+(H[i].e||cfg.end)+'" style="width:auto;flex:0 0 auto"></div>').join('');
+  box.innerHTML='<div class="notice info">Escolha os dias de funcionamento e o horário de início e fim de CADA dia. É o que aparece no agendamento online.</div>'
     +checks
-    +'<div class="row-flex" style="margin-top:14px"><div><label style="margin-top:0">Abertura</label><input type="time" id="hrStart" value="'+cfg.start+'"></div>'
-    +'<div><label style="margin-top:0">Fechamento</label><input type="time" id="hrEnd" value="'+cfg.end+'"></div>'
-    +'<div><label style="margin-top:0">Intervalo entre horários (min)</label><input type="number" id="hrSlot" value="'+cfg.slotMin+'" min="10" step="5"></div></div>'
+    +'<div class="row-flex" style="margin-top:14px"><div><label style="margin-top:0">Intervalo entre horários (min)</label><input type="number" id="hrSlot" value="'+cfg.slotMin+'" min="10" step="5"></div></div>'
     +'<br><button class="btn btn-gold" onclick="saveHours()">SALVAR HORÁRIOS</button><div id="hrMsg"></div>';
 }
 async function saveHours(){
-  for(let i=0;i<7;i++)cfg.days[i]=document.getElementById('day'+i).checked;
-  cfg.start=document.getElementById('hrStart').value;cfg.end=document.getElementById('hrEnd').value;
+  const H=[];
+  for(let i=0;i<7;i++){
+    cfg.days[i]=document.getElementById('day'+i).checked;
+    H.push({s:document.getElementById('dayS'+i).value||cfg.start,e:document.getElementById('dayE'+i).value||cfg.end});
+  }
+  cfg.hours=H;
   cfg.slotMin=Math.max(10,parseInt(document.getElementById('hrSlot').value)||30);
   try{
     await dbPut('/cfg',cfg);
