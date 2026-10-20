@@ -329,11 +329,12 @@ function renderSlots(){
   const daysOpen=(Array.isArray(cfg.days)&&cfg.days.length===7)?cfg.days:[1,1,1,1,1,1,0];
   if(!daysOpen[dow]){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
   const s=svc(document.getElementById('bkService').value)||{dur:40,name:'Corte'};
-  const HrDia=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null; /* horário individual por dia */
-  let start=toMin((HrDia&&HrDia[dow].s)||cfg.start||''),end=toMin((HrDia&&HrDia[dow].e)||cfg.end||'');
-  if(isNaN(start))start=480;
-  if(isNaN(end))end=1140;
-  if(end<start)end=start;
+  const HrDia=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null; /* períodos individuais por dia */
+  const dH=HrDia?HrDia[dow]:null;
+  const ranges=[];
+  const addR=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)ranges.push([x,y]);};
+  addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end); /* período 1 (manhã) */
+  addR(dH&&dH.s2,dH&&dH.e2); /* período 2 (tarde) — opcional; o vão entre os períodos é o almoço */
   const dayBk=(bookings||[]).filter(b=>b&&b.date===date&&!isNaN(toMin(b.time||''))&&b.dur>0);
   /* GRADE DINÂMICA: passo ajustado à duração do serviço — múltiplo maior
      de 20/10/5 que divide a duração. Ex.: Corte(40) e Corte+Barba(60) usam
@@ -344,15 +345,17 @@ function renderSlots(){
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
   let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
-  for(let t=start;t<=end;t+=step){
-    if(t+s.dur>end)break; /* ⛔ o serviço precisa terminar antes do fechamento do dia */
-    if(dow>=1&&dow<=5&&t>=720&&t<840)continue; /* ⛔ almoço seg-sex: 12h às 14h não aparece na grade */
-    /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
-    const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
-    const off=hit||t<blockUntil;
-    if(!off)blockUntil=t+s.dur;
-    grid.push({t,off,hit});
+  for(const rg of ranges){
+    for(let t=rg[0];t<=rg[1];t+=step){
+      if(t+s.dur>rg[1])break; /* ⛔ o serviço precisa terminar antes do fim do período */
+      /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
+      const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
+      const off=hit||t<blockUntil;
+      if(!off)blockUntil=t+s.dur;
+      grid.push({t,off,hit});
+    }
   }
+  if(!grid.length){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
   const recSet={};
   const isLunch=t=>{const h=Math.floor(t/60);return h>=12&&h<14;}; /* almoço: 12h às 13h59 (livre, mas sem ⭐) */
   const firstFree=grid.find(g=>!g.off&&!isLunch(g.t));
@@ -407,10 +410,13 @@ async function submitBooking(){
   const list=Array.isArray(latest)?latest:(latest?Object.values(latest):[]);
   const st=toMin(selSlot);
   const dowBk=new Date(date+'T12:00:00').getDay();
-  if(dowBk>=1&&dowBk<=5&&st>=720&&st<840){savingBk=false;return fail('⛔ Almoço: não atendemos das 12h às 14h de segunda a sexta.');}
   const HrBk=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null;
-  const fimDia=toMin((HrBk&&HrBk[dowBk].e)||cfg.end||'');
-  if(!isNaN(fimDia)&&st+s.dur>fimDia){savingBk=false;return fail('⛔ Este horário não cabe antes do fechamento ('+((HrBk&&HrBk[dowBk].e)||cfg.end)+'). Escolha um horário mais cedo.');}
+  const dHB=HrBk?HrBk[dowBk]:null;
+  const rangesBk=[];
+  const addRB=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)rangesBk.push([x,y]);};
+  addRB((dHB&&(dHB.s1||dHB.s))||cfg.start,(dHB&&(dHB.e1||dHB.e))||cfg.end);
+  addRB(dHB&&dHB.s2,dHB&&dHB.e2);
+  if(!rangesBk.some(r=>st>=r[0]&&st+s.dur<=r[1])){savingBk=false;return fail('⛔ Fora do expediente deste dia (ou não cabe antes do fechamento). Escolha outro horário.');}
   if(list.some(b=>b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+b.dur))){
     savingBk=false;
     bookings=list;
@@ -476,18 +482,16 @@ function renderTabAg(){
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   /* resumo semanal: total da semana atual + da semana passada (guardado antes da limpeza de segunda) */
-  const agoraT2=Date.now();
-  const foiAtd=b=>new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agoraT2; /* já passou pela cadeira */
   const mSeg=mondayISO();
-  const recSem=(bookings||[]).filter(b=>b.date>=mSeg&&foiAtd(b)).reduce((a,b)=>a+Number(b.price||0),0);
-  const pendSem=(bookings||[]).filter(b=>b.date>=mSeg&&!foiAtd(b)).reduce((a,b)=>a+Number(b.price||0),0);
+  const recSem=(bookings||[]).filter(b=>b.date>=mSeg&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  const pendSem=(bookings||[]).filter(b=>b.date>=mSeg&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
   top='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
     +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana — recebido: <b>R$ '+recSem.toFixed(2).replace('.',',')+'</b></span>'
     +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
     +(lastWeekTotal!=null?'<span class="badge" style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">📆 Semana passada: <b style="color:var(--gold)">R$ '+lastWeekTotal.toFixed(2).replace('.',',')+'</b></span>':'')
     +'</div>'+top;
   const rec={},pend={};
-  sorted.forEach(b=>{const t=foiAtd(b)?rec:pend;t[b.date]=(t[b.date]||0)+Number(b.price||0);});
+  sorted.forEach(b=>{const t=b.done?rec:pend;t[b.date]=(t[b.date]||0)+Number(b.price||0);});
   const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px;flex-wrap:wrap">'
     +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:6px 14px;border-radius:999px">💰 Recebido: <b>R$ '+(rec[d]||0).toFixed(2).replace('.',',')+'</b></span>'
     +((pend[d]||0)>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:6px 14px;border-radius:999px">⏳ A receber: R$ '+pend[d].toFixed(2).replace('.',',')+'</span>':'')
@@ -496,13 +500,15 @@ function renderTabAg(){
   const agora=Date.now();
   sorted.forEach(b=>{
     if(b.date!==lastDate){lastDate=b.date;html+='<h3 style="color:var(--gold);margin:22px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>'+totalHtml(b.date);}
-    const atendido=new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agora; /* horário + duração já passou = cliente já foi atendido */
+    const atendido=!!b.done; /* confirmado manualmente pelo barbeiro */
+    const podeConfirmar=!atendido&&new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agora; /* horário já passou: libera o botão de confirmar */
     html+='<div class="card" style="padding:16px 20px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'+(atendido?'opacity:.65;border-left:4px solid #2ecc71;':'')+'">'
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +(atendido?' <span class="badge" style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71">✅ Atendido</span>':'')
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
       +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waClient(b.phone,'Olá '+b.name+'! Aqui é da Alfa Barbearia. Seu horário está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'. Qualquer imprevisto, me avise!')+'">WhatsApp</a>'
+      +(podeConfirmar?'<button class="btn" style="padding:7px 14px;font-size:13px;border-color:#2ecc71;color:#2ecc71" onclick="doneBk('+b.id+')">✅ Confirmar corte</button>':'')
       +'<button class="btn btn-outline" style="padding:7px 14px;font-size:13px" onclick="reschedule('+b.id+')">Remarcar</button>'
       +'<button class="btn btn-danger" onclick="cancelBk('+b.id+')">Cancelar</button></div></div>';
   });
@@ -539,6 +545,15 @@ async function clearOld(){
     bookings=bookings.filter(b=>b.date>=todayISO());
     await dbPut('/bookings',bookings);
     renderTabAg();alert('Histórico antigo apagado!');
+  }catch(e){netErr();}
+}
+async function doneBk(id){
+  const b=bookings.find(x=>x.id===id);if(!b)return;
+  if(!confirm('Confirmar que '+b.name+' já foi atendido? O valor entra em "Recebido".'))return;
+  try{
+    b.done=true;
+    await dbPut('/bookings',bookings);
+    renderAdmin();
   }catch(e){netErr();}
 }
 async function cancelBk(id){
@@ -612,8 +627,10 @@ async function delService(id){
 function renderTabHr(){
   const box=document.getElementById('tab-hr');
   const H=(cfg.hours&&cfg.hours.length===7)?cfg.hours:cfg.days.map(()=>({s:cfg.start,e:cfg.end})); /* compatibilidade: se ainda não tem horário por dia, usa o geral */
-  const checks=cfg.days.map((v,i)=>'<div class="day-check" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap"><label style="min-width:160px;margin:0"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> '+DAYS[i]+'</label><input type="time" id="dayS'+i+'" value="'+(H[i].s||cfg.start)+'" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+(H[i].e||cfg.end)+'" style="width:auto;flex:0 0 auto"></div>').join('');
-  box.innerHTML='<div class="notice info">Escolha os dias de funcionamento e o horário de início e fim de CADA dia. É o que aparece no agendamento online.</div>'
+  const checks=cfg.days.map((v,i)=>'<div class="day-check" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><label style="min-width:150px;margin:0"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> '+DAYS[i]+'</label>'
+    +'<input type="time" id="dayS'+i+'" value="'+(H[i].s1||H[i].s||cfg.start)+'" title="Início do período da manhã" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+(H[i].e1||H[i].e||cfg.end)+'" title="Fim do período da manhã" style="width:auto;flex:0 0 auto">'
+    +'<span style="color:var(--muted)">e</span> <input type="time" id="dayS2'+i+'" value="'+(H[i].s2||'')+'" title="Início da tarde (opcional)" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE2'+i+'" value="'+(H[i].e2||'')+'" title="Fim da tarde (opcional)" style="width:auto;flex:0 0 auto"></div>').join('');
+  box.innerHTML='<div class="notice info">Defina os dias e até dois períodos por dia (ex.: 08h–12h <b>e</b> 14h–18h). O intervalo entre eles é o almoço — fica fora do agendamento online.</div>'
     +checks
     +'<div class="row-flex" style="margin-top:14px"><div><label style="margin-top:0">Intervalo entre horários (min)</label><input type="number" id="hrSlot" value="'+cfg.slotMin+'" min="10" step="5"></div></div>'
     +'<br><button class="btn btn-gold" onclick="saveHours()">SALVAR HORÁRIOS</button><div id="hrMsg"></div>';
@@ -622,7 +639,12 @@ async function saveHours(){
   const H=[];
   for(let i=0;i<7;i++){
     cfg.days[i]=document.getElementById('day'+i).checked;
-    H.push({s:document.getElementById('dayS'+i).value||cfg.start,e:document.getElementById('dayE'+i).value||cfg.end});
+    H.push({
+      s1:document.getElementById('dayS'+i).value||cfg.start,
+      e1:document.getElementById('dayE'+i).value||cfg.end,
+      s2:document.getElementById('dayS2'+i).value||'',
+      e2:document.getElementById('dayE2'+i).value||''
+    });
   }
   cfg.hours=H;
   cfg.slotMin=Math.max(10,parseInt(document.getElementById('hrSlot').value)||30);
@@ -683,7 +705,7 @@ async function refreshBookings(){
         const kept=bookings.filter(b=>b.date>=m);
         try{
           await dbPut('/bookings',kept);
-          const tot=gone.reduce((a,b)=>a+Number(b.price||0),0);
+          const tot=gone.filter(b=>b.done).reduce((a,b)=>a+Number(b.price||0),0);
           dbPut('/lastWeek',{total:tot,week:m}).catch(()=>{}); /* guarda o total da semana antes do histórico sumir */
           bookings=kept;
         }catch(e){}
