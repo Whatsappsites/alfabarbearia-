@@ -322,7 +322,9 @@ function closeMenu(){document.getElementById('navLinks').classList.remove('open'
 /* ============ SLOTS ============ */
 let selSlot=null;
 function renderSlots(){
-  const box=document.getElementById('slots');box.innerHTML='';selSlot=null;
+  const box=document.getElementById('slots');
+  const prevSel=selSlot; /* guarda a escolha do cliente para não perder ao atualizar */
+  box.innerHTML='';selSlot=null;
   const date=document.getElementById('bkDate').value;
   if(!date){box.innerHTML='<p class="slot-empty">Selecione uma data para ver os horários.</p>';return;}
   const dow=new Date(date+'T12:00:00').getDay();
@@ -375,6 +377,7 @@ function renderSlots(){
       if(recSet[g.t]){d.classList.add('rec');d.innerHTML='⭐ '+toHM(g.t);}
       else d.textContent=toHM(g.t);
       d.onclick=()=>{box.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selSlot=toHM(g.t);};
+      if(prevSel===toHM(g.t)){d.classList.add('sel');selSlot=prevSel;} /* mantém o horário escolhido mesmo após atualização automática */
       any=true;
     }
     else d.textContent=toHM(g.t);
