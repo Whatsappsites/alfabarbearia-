@@ -627,10 +627,17 @@ async function delService(id){
 function renderTabHr(){
   const box=document.getElementById('tab-hr');
   const H=(cfg.hours&&cfg.hours.length===7)?cfg.hours:cfg.days.map(()=>({s:cfg.start,e:cfg.end})); /* compatibilidade: se ainda não tem horário por dia, usa o geral */
-  const checks=cfg.days.map((v,i)=>'<div class="day-check" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><label style="min-width:150px;margin:0"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> '+DAYS[i]+'</label>'
-    +'<input type="time" id="dayS'+i+'" value="'+(H[i].s1||H[i].s||cfg.start)+'" title="Início do período da manhã" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+(H[i].e1||H[i].e||cfg.end)+'" title="Fim do período da manhã" style="width:auto;flex:0 0 auto">'
-    +'<span style="color:var(--muted)">e</span> <input type="time" id="dayS2'+i+'" value="'+(H[i].s2||'')+'" title="Início da tarde (opcional)" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE2'+i+'" value="'+(H[i].e2||'')+'" title="Fim da tarde (opcional)" style="width:auto;flex:0 0 auto"></div>').join('');
-  box.innerHTML='<div class="notice info">Defina os dias e até dois períodos por dia (ex.: 08h–12h <b>e</b> 14h–18h). O intervalo entre eles é o almoço — fica fora do agendamento online.</div>'
+  const checks=cfg.days.map((v,i)=>{
+    const s1=H[i].s1||H[i].s||cfg.start, e1=H[i].e1||H[i].e||cfg.end;
+    const s2=H[i].s2||(v?'14:00':''), e2=H[i].e2||(v?'18:00':''); /* sugere 14h–18h nos dias abertos; deixe vazio para só manhã */
+    return '<div class="day-check" style="margin-bottom:16px">'
+      +'<label style="display:block;margin-bottom:6px"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> <b>'+DAYS[i]+'</b></label>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-left:30px">'
+      +'<input type="time" id="dayS'+i+'" value="'+s1+'" title="Início da manhã" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+e1+'" title="Fim da manhã" style="width:auto;flex:0 0 auto">'
+      +'<span style="color:var(--muted);margin-left:6px">e tarde:</span> <input type="time" id="dayS2'+i+'" value="'+s2+'" title="Início da tarde (opcional)" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE2'+i+'" value="'+e2+'" title="Fim da tarde (opcional)" style="width:auto;flex:0 0 auto">'
+      +'</div></div>';
+  }).join('');
+  box.innerHTML='<div class="notice info">Dias marcados com dois períodos (ex.: <b>08h–12h e 14h–18h</b>). O vão entre eles é o almoço — fica fora do agendamento. Para atender só de manhã, limpe os campos da tarde.</div>'
     +checks
     +'<div class="row-flex" style="margin-top:14px"><div><label style="margin-top:0">Intervalo entre horários (min)</label><input type="number" id="hrSlot" value="'+cfg.slotMin+'" min="10" step="5"></div></div>'
     +'<br><button class="btn btn-gold" onclick="saveHours()">SALVAR HORÁRIOS</button><div id="hrMsg"></div>';
