@@ -234,6 +234,14 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
 </section>
 
 <script>
+window.addEventListener('error',function(e){
+  var d=document.getElementById('errbar');
+  if(!d){d=document.createElement('div');d.id='errbar';
+    d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#c0392b;color:#fff;padding:12px;font-size:13px;z-index:99999;font-family:monospace';
+    document.body.appendChild(d);}
+  d.textContent='ERRO: '+e.message+' — linha '+e.lineno;
+});
+</script><script>
 /* ============ FIREBASE (banco de dados compartilhado) ============ */
 const DB='https://alfabarbearia-default-rtdb.firebaseio.com';
 async function dbGet(path){
