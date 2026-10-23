@@ -588,6 +588,54 @@ function reschedule(id){
   rsB=b;
   document.getElementById('rsName').textContent=b.name+' — '+b.service;
   const d=document.getElementById('rsDate');d.min=todayISO();d.value=b.date;
+  document.getElementById('rsTime').value=b.time;
+  document.getElementById('rsWarn').textContent='';
+  document.getElementById('rsModal').style.display='block';
+}
+function rsClose(){document.getElementById('rsModal').style.display='none';rsB=null;}
+function rsCheck(){
+  const warn=document.getElementById('rsWarn');
+  if(!rsB){warn.textContent='';return false;}
+  const date=document.getElementById('rsDate').value,time=document.getElementById('rsTime').value;
+  if(!date||!time){warn.textContent='Escolha a data e o horário.';return false;}
+  const dow=new Date(date+'T12:00:00').getDay();
+  if(!(cfg.days||[])[dow]){warn.textContent='⛔ Não atendemos neste dia da semana.';return false;}
+  const st=toMin(time);
+  const dH=(cfg.hours&&cfg.hours.length===7)?cfg.hours[dow]:null;
+  const ranges=[];const addR=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)ranges.push([x,y]);};
+  addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end);
+  addR(dH&&dH.s2,dH&&dH.e2);
+  if(!ranges.some(r=>st>=r[0]&&st+rsB.dur<=r[1])){warn.textContent='⛔ Fora do expediente deste dia ou não cabe antes do fechamento.';return false;}
+  if(bookings.some(x=>x.id!==rsB.id&&x.date===date&&overlaps(st,st+rsB.dur,toMin(x.time),toMin(x.time)+x.dur))){warn.textContent='⛔ Já existe agendamento neste horário.';return false;}
+  warn.textContent='';
+  return true;
+}
+document.addEventListener('change',e=>{if((e.target.id==='rsDate'||e.target.id==='rsTime')&&rsB)rsCheck();});
+async function rsConfirm(){
+  if(!rsB)return;
+  if(!rsCheck())return;
+  const nd=document.getElementById('rsDate').value,nt=document.getElementById('rsTime').value;
+  if(!confirm('Remarcar '+rsB.name+' para '+nd.split('-').reverse().join('/')+' às '+nt+'?'))return;
+  const latest=(await dbGet('/bookings'))||[];
+  bookings=latest.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
+  try{await dbPut('/bookings',bookings);rsClose();renderAdmin();renderSlots();}catch(e){netErr();}
+}
+async function cancelBk(id){
+  if(!confirm('Cancelar este agendamento?'))return;
+  try{
+    bookings=(await dbGet('/bookings'))||[];
+    bookings=bookings.filter(b=>b.id!==id);
+    await dbPut('/bookings',bookings);
+    renderTabAg();renderPublic();renderSlots();
+    alert('Agendamento cancelado.');
+  }catch(e){netErr();}
+}
+let rsB=null;
+function reschedule(id){
+  const b=bookings.find(x=>x.id==id);if(!b)return;
+  rsB=b;
+  document.getElementById('rsName').textContent=b.name+' — '+b.service;
+  const d=document.getElementById('rsDate');d.min=todayISO();d.value=b.date;
   document.getElementById('rsModal').style.display='block';
   rsBuild();
 }
@@ -804,14 +852,18 @@ setInterval(refreshBookings,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshBookings();});
 </script>
 <div id="rsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;padding:16px;overflow:auto">
-  <div style="max-width:520px;margin:30px auto;background:#1b1b1b;border:1px solid #444;border-radius:16px;padding:20px">
+  <div style="max-width:420px;margin:30px auto;background:#1b1b1b;border:1px solid #444;border-radius:16px;padding:20px">
     <h3 style="color:var(--gold);margin:0 0 4px">Remarcar</h3>
     <p id="rsName" style="color:var(--muted);margin:0 0 14px;font-size:14px"></p>
     <label style="margin-top:0">Nova data</label>
-    <input type="date" id="rsDate" onchange="rsBuild()">
-    <label>Horários disponíveis</label>
-    <div id="rsSlots" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px"></div>
-    <button class="btn btn-outline" style="margin-top:16px;width:100%" onclick="rsClose()">FECHAR</button>
+    <input type="date" id="rsDate" style="width:100%">
+    <label>Novo horário</label>
+    <input type="time" id="rsTime" style="width:100%">
+    <p id="rsWarn" style="color:#e74c3c;font-size:13px;min-height:18px;margin:8px 0 0"></p>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="rsClose()">FECHAR</button>
+      <button class="btn btn-gold" style="flex:2" onclick="rsConfirm()">CONFIRMAR</button>
+    </div>
   </div>
 </div>
 </body>
