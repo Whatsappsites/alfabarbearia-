@@ -628,60 +628,6 @@ async function rsConfirm(){
   bookings=latest.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
   try{await dbPut('/bookings',bookings);rsClose();renderAdmin();renderSlots();}catch(e){netErr();}
 }
-async function cancelBk(id){
-  if(!confirm('Cancelar este agendamento?'))return;
-  try{
-    bookings=(await dbGet('/bookings'))||[];
-    bookings=bookings.filter(b=>b.id!==id);
-    await dbPut('/bookings',bookings);
-    renderTabAg();renderPublic();renderSlots();
-    alert('Agendamento cancelado.');
-  }catch(e){netErr();}
-}
-let rsB=null;
-function reschedule(id){
-  const b=bookings.find(x=>x.id==id);if(!b)return;
-  rsB=b;
-  document.getElementById('rsName').textContent=b.name+' — '+b.service;
-  const d=document.getElementById('rsDate');d.min=todayISO();d.value=b.date;
-  document.getElementById('rsModal').style.display='block';
-  rsBuild();
-}
-function rsClose(){document.getElementById('rsModal').style.display='none';rsB=null;}
-async function rsBuild(){
-  const box=document.getElementById('rsSlots');box.innerHTML='<p style="color:var(--muted)">Carregando...</p>';
-  const date=document.getElementById('rsDate').value||rsB.date;
-  const dow=new Date(date+'T12:00:00').getDay();
-  if(!(cfg.days||[])[dow]){box.innerHTML='<p style="color:var(--muted)">⛔ Não atendemos neste dia.</p>';return;}
-  const latest=((await dbGet('/bookings'))||[]).filter(x=>x.id!==rsB.id&&x.date===date);
-  const dH=(cfg.hours&&cfg.hours.length===7)?cfg.hours[dow]:null;
-  const ranges=[];const addR=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)ranges.push([x,y]);};
-  addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end);
-  addR(dH&&dH.s2,dH&&dH.e2);
-  const step=cfg.slotMin||30;
-  let html='';let prevEnd=-1;const cur=toMin(rsB.time);
-  for(const rg of ranges){
-    for(let t=rg[0];t<=rg[1];t+=step){
-      if(t+rsB.dur>rg[1])break;
-      const hit=latest.some(x=>overlaps(t,t+rsB.dur,toMin(x.time),toMin(x.time)+x.dur));
-      const off=hit||t<prevEnd;
-      if(!off)prevEnd=t+rsB.dur;
-      const sel=t===cur&&date===rsB.date;
-      html+='<button class="slot'+(off?' off':'')+(sel?' sel':'')+'" '+(off?'disabled':'')+' onclick="rsPick('+t+')">'+(sel?'✓ ':'')+toHM(t)+'</button>';
-    }
-  }
-  box.innerHTML=html||'<p style="color:var(--muted)">Sem horários disponíveis neste dia.</p>';
-}
-async function rsPick(t){
-  if(!rsB)return;
-  const nt=toHM(t),nd=document.getElementById('rsDate').value;
-  const latest=(await dbGet('/bookings'))||[];
-  if(latest.some(x=>x.id!==rsB.id&&x.date===nd&&overlaps(t,t+rsB.dur,toMin(x.time),toMin(x.time)+x.dur)))return alert('Conflito: já existe agendamento neste horário.');
-  if(!confirm('Remarcar '+rsB.name+' para '+nd.split('-').reverse().join('/')+' às '+nt+'?'))return;
-  bookings=latest.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
-  try{await dbPut('/bookings',bookings);rsClose();renderAdmin();renderSlots();}catch(e){netErr();}
-}
-
 function renderTabSv(){
   const box=document.getElementById('tab-sv');
   let rows=services.map(s=>'<tr><td>'+esc(s.name)+'</td><td>R$ '+Number(s.price).toFixed(2).replace('.',',')+'</td><td>'+s.dur+' min</td>'
