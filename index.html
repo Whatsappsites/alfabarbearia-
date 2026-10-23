@@ -509,7 +509,10 @@ function renderTabAg(){
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +(atendido?' <span class="badge" style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71">✅ Atendido</span>':'')
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      +'<select onchange="changeService('+b.id+',this.value)" title="Trocar serviço" style="background:#161616;color:var(--gold);border:1px solid #444;border-radius:8px;padding:8px;font-size:13px;max-width:100%">'
+      +(Array.isArray(services)?services:[]).map(x=>'<option value="'+x.id+'" '+(String(x.id)===String(b.serviceId)?'selected':'')+'>'+x.name+' · R$'+x.price+'</option>').join('')
+      +'</select>'
       +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waClient(b.phone,'Olá '+b.name+'! Aqui é da Alfa Barbearia. Seu horário está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'. Qualquer imprevisto, me avise!')+'">WhatsApp</a>'
       +(podeConfirmar?'<button class="btn" style="padding:7px 14px;font-size:13px;border-color:#2ecc71;color:#2ecc71" onclick="doneBk('+b.id+')">✅ Confirmar corte</button>':'')
       +'<button class="btn btn-outline" style="padding:7px 14px;font-size:13px" onclick="reschedule('+b.id+')">Remarcar</button>'
@@ -548,6 +551,16 @@ async function clearOld(){
     bookings=bookings.filter(b=>b.date>=todayISO());
     await dbPut('/bookings',bookings);
     renderTabAg();alert('Histórico antigo apagado!');
+  }catch(e){netErr();}
+}
+async function changeService(id,sid){
+  const b=bookings.find(x=>x.id===id);if(!b)return;
+  const sv=(Array.isArray(services)?services:[]).find(x=>String(x.id)===String(sid));if(!sv)return;
+  if(!confirm('Trocar o serviço de "'+b.service+'" para "'+sv.name+'" (R$ '+sv.price.toFixed(2).replace('.',',')+')?')){renderAdmin();return;}
+  try{
+    b.serviceId=sv.id;b.service=sv.name;b.price=sv.price;b.dur=sv.dur;
+    await dbPut('/bookings',bookings);
+    renderAdmin();
   }catch(e){netErr();}
 }
 async function doneBk(id){
