@@ -311,10 +311,11 @@ async function boot(){
 }
 
 /* ============ PUBLIC RENDER ============ */
+const svcOk=()=>services.filter(x=>x&&x.name&&String(x.name).trim());
 function renderPublic(){
-  document.getElementById('servicesGrid').innerHTML=services.map(s=>
+  document.getElementById('servicesGrid').innerHTML=svcOk().map(s=>
     `<div class="card"><h3>${esc(s.name)}</h3><div class="price gold-text">R$ ${Number(s.price).toFixed(2).replace('.',',')}</div><div class="dur">⏱ ${s.dur} minutos</div></div>`).join('');
-  document.getElementById('bkService').innerHTML=services.map(s=>
+  document.getElementById('bkService').innerHTML=svcOk().map(s=>
     `<option value="${s.id}">${esc(s.name)} — R$ ${Number(s.price).toFixed(2).replace('.',',')} (${s.dur}min)</option>`).join('');
   const d=document.getElementById('bkDate');d.min=todayISO();
   const mx=new Date();mx.setDate(mx.getDate()+7);
@@ -520,7 +521,7 @@ function renderTabAg(){
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
       +'<select onchange="changeService('+b.id+',this.value)" title="Trocar serviço" style="background:#161616;color:var(--gold);border:1px solid #444;border-radius:8px;padding:8px;font-size:13px;max-width:100%">'
-      +(Array.isArray(services)?services:[]).map(x=>'<option value="'+x.id+'" '+(String(x.id)===String(b.serviceId)?'selected':'')+'>'+x.name+' · R$'+x.price+'</option>').join('')
+      +svcOk().map(x=>'<option value="'+x.id+'" '+(String(x.id)===String(b.serviceId)?'selected':'')+'>'+x.name+' · R$'+x.price+'</option>').join('')
       +'</select>'
       +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waClient(b.phone,'Olá '+b.name+'! Aqui é da Alfa Barbearia. Seu horário está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'. Qualquer imprevisto, me avise!')+'">WhatsApp</a>'
       +(podeConfirmar?'<button class="btn" style="padding:7px 14px;font-size:13px;border-color:#2ecc71;color:#2ecc71" onclick="doneBk('+b.id+')">✅ Confirmar corte</button>':'')
@@ -564,7 +565,7 @@ async function clearOld(){
 }
 async function changeService(id,sid){
   const b=bookings.find(x=>x.id===id);if(!b)return;
-  const sv=(Array.isArray(services)?services:[]).find(x=>String(x.id)===String(sid));if(!sv)return;
+  const sv=svcOk().find(x=>String(x.id)===String(sid));if(!sv)return;
   if(!confirm('Trocar o serviço de "'+b.service+'" para "'+sv.name+'" (R$ '+sv.price.toFixed(2).replace('.',',')+')?')){renderAdmin();return;}
   try{
     b.serviceId=sv.id;b.service=sv.name;b.price=sv.price;b.dur=sv.dur;
