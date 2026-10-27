@@ -357,12 +357,16 @@ function renderSlots(){
   /* monta a grade primeiro, depois calcula as estrelas */
   const grid=[];
   let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
+  const ehHoje=date===todayISO();
+  const agora=new Date();
+  const agoraMin=agora.getHours()*60+agora.getMinutes(); /* horário de agora em minutos */
   for(const rg of ranges){
     for(let t=rg[0];t<=rg[1];t+=step){
       if(t+s.dur>rg[1])break; /* ⛔ o serviço precisa terminar antes do fim do período */
       /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
       const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
-      const off=hit||t<blockUntil;
+      const passou=ehHoje&&t<=agoraMin; /* ⛔ hoje: horário que já passou não pode ser marcado */
+      const off=hit||t<blockUntil||passou;
       if(!off)blockUntil=t+s.dur;
       grid.push({t,off,hit});
     }
@@ -423,6 +427,10 @@ async function submitBooking(){
   const list=Array.isArray(latest)?latest:(latest?Object.values(latest):[]);
   const st=toMin(selSlot);
   const dowBk=new Date(date+'T12:00:00').getDay();
+  if(date===todayISO()){
+    const ag=new Date();
+    if(st<=ag.getHours()*60+ag.getMinutes()){savingBk=false;return fail('⛔ Este horário já passou. Escolha um horário futuro.');}
+  }
   const HrBk=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null;
   const dHB=HrBk?HrBk[dowBk]:null;
   const rangesBk=[];
