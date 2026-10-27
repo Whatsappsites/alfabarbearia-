@@ -555,10 +555,12 @@ function fillOld(){
   el.innerHTML=html||'<div class="notice info">Nenhum agendamento antigo.</div>';
 }
 async function clearOld(){
-  const oldC=bookings.filter(b=>b.date<todayISO()).length;
-  if(!confirm('Apagar '+oldC+' agendamento(s) antigo(s)? Essa ação não pode ser desfeita.'))return;
   try{
-    bookings=bookings.filter(b=>b.date>=todayISO());
+    const latest=await dbGet('/bookings'); /* versão fresca do banco */
+    const oldC=latest.filter(b=>b.date<todayISO()).length;
+    if(!oldC)return alert('Não há agendamentos antigos para apagar.');
+    if(!confirm('Apagar '+oldC+' agendamento(s) antigo(s)? Essa ação não pode ser desfeita.'))return;
+    bookings=latest.filter(b=>b.date>=todayISO());
     await dbPut('/bookings',bookings);
     renderTabAg();alert('Histórico antigo apagado!');
   }catch(e){netErr();}
@@ -568,8 +570,11 @@ async function changeService(id,sid){
   const sv=svcOk().find(x=>String(x.id)===String(sid));if(!sv)return;
   if(!confirm('Trocar o serviço de "'+b.service+'" para "'+sv.name+'" (R$ '+sv.price.toFixed(2).replace('.',',')+')?')){renderAdmin();return;}
   try{
-    b.serviceId=sv.id;b.service=sv.name;b.price=sv.price;b.dur=sv.dur;
-    await dbPut('/bookings',bookings);
+    const latest=await dbGet('/bookings');
+    const target=latest.find(x=>x.id===id);if(!target)return;
+    target.serviceId=sv.id;target.service=sv.name;target.price=sv.price;target.dur=sv.dur;
+    await dbPut('/bookings',latest);
+    bookings=latest;
     renderAdmin();
   }catch(e){netErr();}
 }
@@ -577,8 +582,11 @@ async function doneBk(id){
   const b=bookings.find(x=>x.id===id);if(!b)return;
   if(!confirm('Confirmar que '+b.name+' já foi atendido? O valor entra em "Recebido".'))return;
   try{
-    b.done=true;
-    await dbPut('/bookings',bookings);
+    const latest=await dbGet('/bookings'); /* pega a versão mais recente do banco pra não apagar agendamentos novos */
+    const target=latest.find(x=>x.id===id);if(!target)return;
+    target.done=true;
+    await dbPut('/bookings',latest);
+    bookings=latest;
     renderAdmin();
   }catch(e){netErr();}
 }
@@ -696,7 +704,6 @@ function renderTabHr(){
 async function saveHours(){
   const H=[];
   for(let i=0;i<7;i++){
-    cfg.days[i]=document.getElementById('day'+i).checked;
     H.push({
       s1:document.getElementById('dayS'+i).value||cfg.start,
       e1:document.getElementById('dayE'+i).value||cfg.end,
@@ -704,10 +711,14 @@ async function saveHours(){
       e2:document.getElementById('dayE2'+i).value||''
     });
   }
-  cfg.hours=H;
-  cfg.slotMin=Math.max(10,parseInt(document.getElementById('hrSlot').value)||30);
   try{
-    await dbPut('/cfg',cfg);
+    const fresh=await dbGet('/cfg')||cfg; /* versão mais recente: só muda o que você editou AGORA */
+    fresh.days=[];
+    for(let i=0;i<7;i++)fresh.days[i]=document.getElementById('day'+i).checked;
+    fresh.hours=H;
+    fresh.slotMin=Math.max(10,parseInt(document.getElementById('hrSlot').value)||30);
+    await dbPut('/cfg',fresh);
+    cfg=fresh;
     renderPublic();renderSlots();
     document.getElementById('hrMsg').innerHTML='<div class="notice ok" style="margin-top:12px">Horários salvos! Já visíveis para todos os clientes.</div>';
   }catch(e){netErr();}
@@ -729,12 +740,14 @@ function renderTabCfg(){
   updateNotifBtn();
 }
 async function saveCfg(){
-  cfg.whatsapp=document.getElementById('cfgWa').value.replace(/\D/g,'');
-  cfg.instagram=document.getElementById('cfgIg').value.trim();
-  const np=document.getElementById('cfgPass').value;
-  if(np){if(np.length<4){document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">A senha deve ter ao menos 4 caracteres.</div>';return;}cfg.password=np;}
   try{
-    await dbPut('/cfg',cfg);
+    const fresh=await dbGet('/cfg')||cfg; /* versão mais recente do banco */
+    fresh.whatsapp=document.getElementById('cfgWa').value.replace(/\D/g,'');
+    fresh.instagram=document.getElementById('cfgIg').value.trim();
+    const np=document.getElementById('cfgPass').value;
+    if(np){if(np.length<4){document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">A senha deve ter ao menos 4 caracteres.</div>';return;}fresh.password=np;}
+    await dbPut('/cfg',fresh);
+    cfg=fresh;
     renderPublic();
     document.getElementById('cfgMsg').innerHTML='<div class="notice ok" style="margin-top:12px">Configurações salvas! Já visíveis para todos os clientes.</div>';
   }catch(e){netErr();}
@@ -755,17 +768,21 @@ async function refreshBookings(){
   if(Array.isArray(data.bookings)){
     bookings=data.bookings;
     checkNewBk();
-    /* limpeza semanal: a cada segunda-feira o histórico anterior some sozinho */
+    /* limpeza semanal (segunda): apaga SOMENTE os atendimentos confirmados (✅) de antes desta semana.
+       Agendamentos antigos NÃO confirmados ficam guardados até você confirmar ou cancelar. */
     if(typeof admOk!=='undefined'&&admOk){
       const m=mondayISO();
-      const gone=bookings.filter(b=>b.date<m);
-      if(gone.length){
-        const kept=bookings.filter(b=>b.date>=m);
+      if(bookings.some(b=>b.date<m&&b.done)){
         try{
-          await dbPut('/bookings',kept);
-          const tot=gone.filter(b=>b.done).reduce((a,b)=>a+Number(b.price||0),0);
-          dbPut('/lastWeek',{total:tot,week:m}).catch(()=>{}); /* guarda o total da semana antes do histórico sumir */
-          bookings=kept;
+          const latest=await dbGet('/bookings'); /* versão fresca: nunca apaga agendamento novo por engano */
+          const gone=latest.filter(b=>b.date<m&&b.done);
+          if(gone.length){
+            const kept=latest.filter(b=>!(b.date<m&&b.done));
+            await dbPut('/bookings',kept);
+            const tot=gone.reduce((a,b)=>a+Number(b.price||0),0);
+            dbPut('/lastWeek',{total:tot,week:m}).catch(()=>{});
+            bookings=kept;
+          }
         }catch(e){}
       }
     }
