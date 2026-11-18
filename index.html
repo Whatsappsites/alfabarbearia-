@@ -335,9 +335,22 @@ async function mutateBookings(change,maxAttempts=6){
     if(!r.ok)throw new Error('Não foi possível consultar os agendamentos ('+r.status+').');
     const tag=r.headers.get('ETag');
     if(!tag)throw new Error('O servidor não forneceu ETag; gravação cancelada para proteger reservas.');
-    const list=normalizeBookings(await r.json());
+    const raw=await r.json();
+    /* Se o Firebase retornar um OBJETO com chaves, não o reescrever como array.
+       Esse formato precisa ser migrado conscientemente, com backup prévio. */
+    if(raw!==null&&!Array.isArray(raw))
+      throw new Error('Formato inesperado em /bookings (objeto). Escrita bloqueada para proteger dados; faça backup e migração antes de continuar.');
+    const list=normalizeBookings(raw);
+    if(list.some(b=>!b||!Number.isSafeInteger(Number(b.id))||!b.date||!b.time))
+      throw new Error('Existem reservas incompletas no banco. Escrita bloqueada para proteger os dados.');
     const next=change(list);
     if(!Array.isArray(next))throw new Error('Atualização de agendamento inválida.');
+    /* Salvaguarda: uma mudança não pode sumir com nenhum ID que já existia. */
+    const novosIds=new Set(next.map(b=>String(b&&b.id)));
+    const idsAntes=list.map(b=>String(b.id));
+    if(new Set(idsAntes).size!==idsAntes.length || novosIds.size!==next.length ||
+       idsAntes.some(id=>!novosIds.has(id)))
+      throw new Error('Operação bloqueada: excluir ou substituir registros existentes não é permitido. Use cancelamento com histórico.');
     const w=await fetch(DB+'/bookings.json',{
       method:'PUT',headers:{'If-Match':tag,'Content-Type':'application/json'},
       body:JSON.stringify(next)
@@ -345,6 +358,7 @@ async function mutateBookings(change,maxAttempts=6){
     if(w.status===412)continue;
     if(!w.ok)throw new Error('Não foi possível salvar os agendamentos ('+w.status+').');
     bookings=next;
+    bookingReadState='ok';bookingReadError='';lastBookingReadAt=new Date().toLocaleTimeString('pt-BR');
     return next;
   }
   throw new Error('Muitas alterações simultâneas. Tente novamente.');
@@ -368,6 +382,9 @@ let services=[
   {id:6,name:'Luzes / Platinado',price:80,dur:90}
 ];
 let bookings=[];
+/* Agendamentos cancelados ficam preservados como histórico; nunca são removidos do banco. */
+const bookingAtivo=b=>b&&b.status!=='cancelled';
+const bookingsAtivos=()=>bookings.filter(bookingAtivo);
 /* Estado da leitura: diferencia banco vazio de falha na conexão/permissões. */
 let bookingReadState='loading';
 let bookingReadError='';
@@ -580,7 +597,7 @@ function renderPublic(){
   document.getElementById('footWa').href=wa;
   document.getElementById('footIg').href=/^https:\/\/[^\s/]+/i.test(cfg.instagram||'')?(cfg.instagram):'#';
   const wd=cfg.days.map((v,i)=>v?DAYS[i].slice(0,3):null).filter(Boolean).join(', ');
-  document.getElementById('footHours').innerHTML='Funcionamento: <b style="color:var(--gold)">'+wd+'</b> · '+cfg.start+' às '+cfg.end;
+  document.getElementById('footHours').innerHTML='Funcionamento: <b style="color:var(--gold)">'+esc(wd)+'</b> · '+esc(cfg.start)+' às '+esc(cfg.end);
 }
 function closeMenu(){document.getElementById('navLinks').classList.remove('open')}
 
@@ -604,7 +621,7 @@ function renderSlots(){
   const addR=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)ranges.push([x,y]);};
   addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end); /* período 1 (manhã) */
   addR(dH&&dH.s2,dH&&dH.e2); /* período 2 (tarde) — opcional; o vão entre os períodos é o almoço */
-  const dayBk=(bookings||[]).filter(b=>b&&b.date===date&&!isNaN(toMin(b.time||''))&&b.dur>0);
+  const dayBk=bookingsAtivos().filter(b=>b.date===date&&!isNaN(toMin(b.time||''))&&b.dur>0);
   /* GRADE DINÂMICA: passo ajustado à duração do serviço — múltiplo maior
      de 20/10/5 que divide a duração. Ex.: Corte(40) e Corte+Barba(60) usam
      grade de 20min (visual limpo); Barba(30)/Luzes(90) de 10min;
@@ -672,6 +689,8 @@ async function submitBooking(){
   const phone=document.getElementById('bkPhone').value.trim();
   const s=svc(sid);
   const fail=m=>err.innerHTML='<div class="notice err" style="margin-top:14px">'+m+'</div>';
+  if(!s||!Number.isFinite(Number(s.dur))||Number(s.dur)<=0)return fail('Serviço inválido. Atualize a página.');
+  if(bookingReadState==='error'||bookingReadState==='loading')return fail('Agenda indisponível para conferência. Atualize a página antes de reservar.');
   if(!date)return fail('Selecione a data do atendimento.');
   if(date<todayISO())return fail('Não é possível agendar em datas passadas.');
   const dateField=document.getElementById('bkDate');
@@ -698,7 +717,7 @@ async function submitBooking(){
   let waWin=null;try{waWin=window.open('about:blank','_blank');}catch(e){} /* tenta abrir WhatsApp após a confirmação */
   try{
     await mutateBookings(list=>{
-      if(list.some(b=>b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+Number(b.dur||0)))){
+      if(list.some(b=>bookingAtivo(b)&&b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+Number(b.dur||0)))){
         const conflict=new Error('Este horário acabou de ser ocupado. Escolha outro.');conflict.isBookingConflict=true;throw conflict;
       }
       return [...list,bk];
@@ -730,7 +749,7 @@ function resetBooking(){
 let admOk=false;
 function adminLogin(){
   const p=document.getElementById('admPass').value;
-  if(p===cfg.password){admOk=true;document.getElementById('adminLogin').classList.add('hidden');
+  if(p && typeof cfg.password==='string' && p===cfg.password){admOk=true;document.getElementById('adminLogin').classList.add('hidden');
     document.getElementById('adminPanel').classList.remove('hidden');renderAdmin();renderBackupPanel();tentarBackupAutomaticoLocal();}
   else document.getElementById('admErr').innerHTML='<div class="notice err" style="margin-top:14px">Senha incorreta.</div>';
 }
@@ -746,19 +765,22 @@ function renderTabAg(){
   const box=document.getElementById('tab-ag');
   const t=todayISO();
   const fut=[];let old=0;
-  bookings.forEach(b=>{if(b&&typeof b.date==='string'&&b.date>=t)fut.push(b);else old++;});
+  const cancelados=bookings.filter(b=>b&&b.status==='cancelled');
+  bookingsAtivos().forEach(b=>{if(typeof b.date==='string'&&b.date>=t)fut.push(b);else old++;});
+  const cancelHtml=cancelados.length?'<details style="margin-top:20px"><summary style="cursor:pointer;color:var(--gold)">📁 '+cancelados.length+' cancelado(s) — histórico preservado</summary>'+
+    cancelados.map(b=>'<div class="card" style="margin:10px 0;padding:12px;opacity:.7"><b>'+esc(b.date||'')+' '+esc(b.time||'')+'</b> · '+esc(b.service||'')+' · '+esc(b.name||'')+' <span class="badge">Cancelado</span></div>').join('')+'</details>':'';
   const readingError=bookingReadState==='error';
   const diag='<div class="notice '+(readingError?'err':'info')+'" style="margin-bottom:14px">'
     +(readingError?'⚠️ <b>Falha ao ler agendamentos.</b> '+esc(bookingReadError)+'; a lista abaixo pode estar desatualizada.'
       :bookingReadState==='loading'?'⏳ Consultando agendamentos do Firebase…'
-      :'<b>Firebase /bookings:</b> '+bookings.length+' registro(s) · '+fut.length+' de hoje ou futuros · '+old+' antigo(s).')
+      :'<b>Firebase /bookings:</b> '+bookings.length+' registro(s) preservado(s) · '+fut.length+' ativo(s) de hoje ou futuros · '+old+' antigo(s) · '+cancelados.length+' cancelado(s).')
     +(lastBookingReadAt?' <small style="opacity:.8">Última consulta: '+esc(lastBookingReadAt)+'</small>':'')
     +' <button class="btn btn-outline" style="padding:5px 12px;font-size:12px;margin-left:6px" onclick="refreshBookings().catch(()=>{})">Atualizar consulta</button></div>';
   let top='';
   if(old>0){
     top='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
       +'<button class="badge" style="cursor:pointer;font-size:13px;padding:8px 16px" onclick="toggleOld()">📁 '+old+' antigo(s) oculto(s) — toque para ver</button>'
-      +'<button class="btn btn-danger" onclick="clearOld()">Apagar histórico</button></div>'
+      +'<span style="font-size:12px;color:var(--muted)">Histórico preservado (sem exclusão automática)</span></div>'
       +'<div id="oldList" style="display:'+(oldOpen?'block':'none')+'"></div>';
   }
   if(!fut.length){
@@ -769,15 +791,15 @@ function renderTabAg(){
       :bookings.length===0
       ?'<div class="notice info">A leitura de /bookings funcionou, mas este caminho retornou 0 registros. Confira a pasta bookings e os backups no Firebase antes de alterar qualquer dado.</div>'
       :'<div class="notice info">Não há agendamentos para hoje ou datas futuras. Existem registros antigos; use “antigos ocultos” para consultá-los.</div>';
-    box.innerHTML=diag+top+msg;
+    box.innerHTML=diag+top+msg+cancelHtml;
     if(oldOpen&&old>0)fillOld();
     return;
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   /* resumo semanal: total da semana atual + da semana passada (guardado antes da limpeza de segunda) */
   const mSeg=mondayISO();
-  const recSem=(bookings||[]).filter(b=>b.date>=mSeg&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
-  const pendSem=(bookings||[]).filter(b=>b.date>=mSeg&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  const recSem=bookingsAtivos().filter(b=>b.date>=mSeg&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  const pendSem=bookingsAtivos().filter(b=>b.date>=mSeg&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
   top=diag+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
     +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana — recebido: <b>R$ '+recSem.toFixed(2).replace('.',',')+'</b></span>'
     +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
@@ -808,7 +830,7 @@ function renderTabAg(){
       +'<button class="btn btn-outline" style="padding:7px 14px;font-size:13px" onclick="reschedule('+b.id+')">Remarcar</button>'
       +'<button class="btn btn-danger" onclick="cancelBk('+b.id+')">Cancelar</button></div></div>';
   });
-  box.innerHTML=html;
+  box.innerHTML=html+cancelHtml;
   if(oldOpen)fillOld();
 }
 function toggleOld(){
@@ -823,7 +845,7 @@ function fillOld(){
   const el=document.getElementById('oldList');
   if(!el)return;
   const t=todayISO();
-  const old=bookings.filter(b=>b.date<t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const old=bookingsAtivos().filter(b=>b.date<t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   const totaisOld={};old.forEach(b=>{totaisOld[b.date]=(totaisOld[b.date]||0)+Number(b.price||0);});
   let last='',html='';
   old.forEach(b=>{
@@ -838,27 +860,17 @@ function fillOld(){
   el.innerHTML=html||'<div class="notice info">Nenhum agendamento antigo.</div>';
 }
 async function clearOld(){
-  try{
-    const latest=await getBk(); /* versão fresca do banco */
-    const oldC=latest.filter(b=>b.date<todayISO()).length;
-    if(!oldC)return alert('Não há agendamentos antigos para apagar.');
-    const naoConf=latest.filter(b=>b.date<todayISO()&&!b.done);
-    const valorNC=naoConf.reduce((a,b)=>a+Number(b.price||0),0);
-    const aviso=naoConf.length?'\n\n⚠️ '+naoConf.length+' deles NÃO foram confirmados (R$ '+valorNC.toFixed(2).replace('.',',')+' não contabilizado). Confirme-os antes se já foram atendidos.':'';
-    if(!confirm('Apagar '+oldC+' agendamento(s) antigo(s)? Essa ação não pode ser desfeita.'+aviso))return;
-    await mutateBookings(list=>list.filter(b=>b.date>=todayISO()));
-    renderTabAg();alert('Histórico antigo apagado!');
-  }catch(e){netErr();}
+  alert('Exclusão definitiva do histórico desativada por segurança. Os agendamentos ficam preservados, inclusive os cancelados.');
 }
 async function changeService(id,sid){
-  const b=bookings.find(x=>x.id===id);if(!b)return;
+  const b=bookings.find(x=>x.id===id);if(!b||!bookingAtivo(b))return;
   const sv=svcOk().find(x=>String(x.id)===String(sid));if(!sv)return;
   if(!confirm('Trocar o serviço de "'+b.service+'" para "'+sv.name+'" (R$ '+sv.price.toFixed(2).replace('.',',')+')?')){renderAdmin();return;}
   try{
     await mutateBookings(list=>{
-      const target=list.find(x=>x.id===id);if(!target)throw new Error('Agendamento não encontrado.');
+      const target=list.find(x=>x.id===id);if(!target||!bookingAtivo(target))throw new Error('Agendamento não encontrado ou cancelado.');
       const st=toMin(target.time);
-      const bate=list.find(x=>x.id!==id&&x.date===target.date&&overlaps(st,st+sv.dur,toMin(x.time),toMin(x.time)+x.dur));
+      const bate=list.find(x=>bookingAtivo(x)&&x.id!==id&&x.date===target.date&&overlaps(st,st+sv.dur,toMin(x.time),toMin(x.time)+x.dur));
       if(bate)throw new Error('O serviço coincide com o agendamento das '+bate.time+'. Remarque antes.');
       return list.map(x=>x.id===id?{...x,serviceId:sv.id,service:sv.name,price:sv.price,dur:sv.dur}:x);
     });
@@ -866,30 +878,33 @@ async function changeService(id,sid){
   }catch(e){netErr();}
 }
 async function doneBk(id){
-  const b=bookings.find(x=>x.id===id);if(!b)return;
+  const b=bookings.find(x=>x.id===id);if(!b||!bookingAtivo(b))return;
   if(!confirm('Confirmar que '+b.name+' já foi atendido? O valor entra em "Recebido".'))return;
   try{
     await mutateBookings(list=>{
-      if(!list.some(x=>x.id===id))throw new Error('Agendamento não encontrado.');
+      if(!list.some(x=>x.id===id&&bookingAtivo(x)))throw new Error('Agendamento não encontrado ou cancelado.');
       return list.map(x=>x.id===id?{...x,done:true}:x);
     });
     renderAdmin();
   }catch(e){netErr();}
 }
 async function cancelBk(id){
-  if(!confirm('Cancelar este agendamento?'))return;
+  const atual=bookings.find(b=>b&&b.id===id);
+  if(!atual||!bookingAtivo(atual))return;
+  if(!confirm('Cancelar o atendimento de '+atual.name+' SEM APAGAR o registro? O horário será liberado e a reserva ficará no histórico de cancelados.'))return;
   try{
     await mutateBookings(list=>{
-      if(!list.some(b=>b.id===id))throw new Error('Agendamento já foi removido.');
-      return list.filter(b=>b.id!==id);
+      const encontrado=list.find(b=>b.id===id);
+      if(!encontrado||!bookingAtivo(encontrado))throw new Error('A reserva já está cancelada ou não existe.');
+      return list.map(b=>b.id===id?{...b,status:'cancelled',cancelledAt:Date.now()}:b);
     });
     renderTabAg();renderPublic();renderSlots();
-    alert('Agendamento cancelado.');
-  }catch(e){netErr();}
+    alert('Agendamento cancelado sem excluir o histórico.');
+  }catch(e){alert('Não foi possível cancelar: '+(e.message||'Falha no Firebase'));}
 }
 let rsB=null;
 function reschedule(id){
-  const b=bookings.find(x=>x.id==id);if(!b)return;
+  const b=bookings.find(x=>x.id==id);if(!b||!bookingAtivo(b))return;
   rsB=b;
   document.getElementById('rsName').textContent=b.name+' — '+b.service;
   const d=document.getElementById('rsDate');d.min=todayISO();d.value=b.date;
@@ -912,7 +927,7 @@ function rsCheck(){
   addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end);
   addR(dH&&dH.s2,dH&&dH.e2);
   if(!ranges.some(r=>st>=r[0]&&st+rsB.dur<=r[1])){warn.textContent='⛔ Fora do expediente deste dia ou não cabe antes do fechamento.';return false;}
-  if(bookings.some(x=>x.id!==rsB.id&&x.date===date&&overlaps(st,st+rsB.dur,toMin(x.time),toMin(x.time)+x.dur))){warn.textContent='⛔ Já existe agendamento neste horário.';return false;}
+  if(bookings.some(x=>bookingAtivo(x)&&x.id!==rsB.id&&x.date===date&&overlaps(st,st+rsB.dur,toMin(x.time),toMin(x.time)+x.dur))){warn.textContent='⛔ Já existe agendamento neste horário.';return false;}
   warn.textContent='';
   return true;
 }
@@ -925,9 +940,9 @@ async function rsConfirm(){
   try{
     await mutateBookings(list=>{
       const target=list.find(x=>x.id===rsB.id);
-      if(!target)throw new Error('Agendamento já foi removido.');
+      if(!target||!bookingAtivo(target))throw new Error('Agendamento cancelado ou inexistente.');
       const start=toMin(nt);
-      if(list.some(x=>x.id!==target.id&&x.date===nd&&overlaps(start,start+Number(target.dur),toMin(x.time),toMin(x.time)+Number(x.dur)))){
+      if(list.some(x=>bookingAtivo(x)&&x.id!==target.id&&x.date===nd&&overlaps(start,start+Number(target.dur),toMin(x.time),toMin(x.time)+Number(x.dur)))){
         throw new Error('O novo horário foi ocupado por outra pessoa.');
       }
       return list.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
@@ -1108,9 +1123,9 @@ async function enableNotif(){
 }
 function checkNewBk(){
   if(!('Notification' in window))return;
-  const ids=(bookings||[]).map(b=>b.id);
+  const ids=bookingsAtivos().map(b=>b.id);
   if(bkSeen===null){bkSeen=new Set(ids);return;} /* primeira carga: só monta a base, não notifica */
-  const fresh=bookings.filter(b=>!bkSeen.has(b.id));
+  const fresh=bookingsAtivos().filter(b=>!bkSeen.has(b.id));
   bkSeen=new Set(ids);
   if(!fresh.length)return;
   if(typeof admOk==='undefined'||!admOk)return; /* só notifica com o painel do barbeiro logado */
