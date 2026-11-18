@@ -72,6 +72,21 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 .slot-empty{color:var(--muted);font-size:14px;padding:8px 0}
 .slot.rec{border:1px dashed rgba(212,175,55,.5);color:var(--gold)} /* ⭐ apenas indica recomendado — NÃO parece selecionado */
 .slot-rec-hint{color:var(--gold-light);font-size:13px;margin-top:12px;font-weight:600;grid-column:1 / -1}
+/* AVALIAÇÕES */
+.review-layout{display:grid;grid-template-columns:minmax(280px,390px) minmax(0,1fr);gap:26px;align-items:start}
+.review-form,.review-results{background:var(--dark2);border:1px solid var(--line);border-radius:14px;padding:26px}
+.review-stars{display:flex;gap:4px;margin-top:8px}
+.review-star{border:0;background:transparent;color:#676767;font-size:33px;line-height:1;cursor:pointer;padding:5px;min-width:42px;min-height:44px}
+.review-star.selected{color:var(--gold)}
+.review-star:focus-visible{outline:2px solid var(--gold);border-radius:5px}
+.review-form textarea{width:100%;background:#0d0d0d;border:1px solid var(--line);border-radius:6px;color:var(--text);padding:13px 14px;resize:vertical;min-height:90px;font:inherit}
+.review-form textarea:focus{outline:1px solid var(--gold)}
+.review-average{font-size:38px;font-weight:700;color:var(--gold);line-height:1.2}
+.review-entry{border-top:1px solid var(--line);padding:18px 0 12px;overflow-wrap:anywhere}
+.review-entry .review-meta{font-size:12px;color:var(--muted)}
+.review-entry p{white-space:pre-wrap;color:var(--text);margin-top:6px}
+.review-note{font-size:12px;color:var(--muted);margin-top:12px}
+@media(max-width:750px){.review-layout{grid-template-columns:1fr}.review-form,.review-results{padding:20px}}
 /* CONFIRM */
 .confirm-box{text-align:center;padding:20px}
 .confirm-box .check{font-size:64px;color:var(--gold)}
@@ -126,6 +141,7 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
       <li><a href="#inicio" onclick="closeMenu()">Início</a></li>
       <li><a href="#servicos" onclick="closeMenu()">Serviços</a></li>
       <li><a href="#agendar" onclick="closeMenu()">Agendar</a></li>
+      <li><a href="#avaliacoes" onclick="closeMenu()">Avaliações</a></li>
       <li><a href="#contato" onclick="closeMenu()">Contato</a></li>
       <li><a href="#admin" onclick="closeMenu()">Área do Barbeiro</a></li>
     </ul>
@@ -183,6 +199,41 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
       <a class="btn btn-gold" id="doneWa" target="_blank" rel="noopener">SE O WHATSAPP NÃO ABRIR, TOQUE AQUI</a>
       <br><br>
       <a href="#" onclick="resetBooking();return false" style="font-size:14px">Fazer novo agendamento</a>
+    </div>
+  </div>
+</section>
+
+<!-- AVALIAÇÕES -->
+<section id="avaliacoes">
+  <div class="container">
+    <h2 class="section-title">Avaliações dos <span class="gold-text">Clientes</span></h2>
+    <p class="section-sub">Sua opinião nos ajuda a melhorar cada atendimento.</p>
+    <div class="review-layout">
+      <div class="review-form">
+        <h3 style="color:var(--gold)">Deixe sua avaliação</h3>
+        <label for="rvName">Seu nome</label>
+        <input id="rvName" maxlength="60" autocomplete="name" placeholder="Seu primeiro nome ou apelido">
+        <label id="rvStarsLabel">Sua nota (1 a 5 estrelas)</label>
+        <div class="review-stars" id="rvStars" role="group" aria-labelledby="rvStarsLabel">
+          <button type="button" class="review-star" data-stars="1" aria-label="1 estrela" aria-pressed="false">★</button>
+          <button type="button" class="review-star" data-stars="2" aria-label="2 estrelas" aria-pressed="false">★</button>
+          <button type="button" class="review-star" data-stars="3" aria-label="3 estrelas" aria-pressed="false">★</button>
+          <button type="button" class="review-star" data-stars="4" aria-label="4 estrelas" aria-pressed="false">★</button>
+          <button type="button" class="review-star" data-stars="5" aria-label="5 estrelas" aria-pressed="false">★</button>
+        </div>
+        <label for="rvComment">Comentário (opcional)</label>
+        <textarea id="rvComment" maxlength="500" placeholder="Como foi o atendimento?"></textarea>
+        <input id="rvWebsite" tabindex="-1" autocomplete="off" aria-hidden="true" style="display:none" aria-label="Não preencha">
+        <div id="rvMessage" role="status" aria-live="polite"></div>
+        <br>
+        <button id="rvSubmit" type="button" class="btn btn-gold" style="width:100%" onclick="submitReview()">ENVIAR AVALIAÇÃO</button>
+        <p class="review-note">Nome, nota e comentário ficam públicos. Não inclua dados pessoais. As avaliações ainda não são verificadas por atendimento.</p>
+      </div>
+      <div class="review-results">
+        <div id="rvSummary" aria-live="polite">Carregando avaliações...</div>
+        <div id="rvEntries"></div>
+        <button id="rvMore" class="btn btn-outline hidden" style="margin-top:14px" type="button" onclick="showMoreReviews()">VER MAIS AVALIAÇÕES</button>
+      </div>
     </div>
   </div>
 </section>
@@ -248,7 +299,7 @@ const DB='https://alfabarbearia-default-rtdb.firebaseio.com';
 async function dbGet(path){
   /* erro de rede => undefined | banco vazio => null (nunca confundir os dois) */
   try{
-    const r=await fetch(DB+path+'.json');
+    const r=await fetch(DB+path+'.json',{cache:'no-store'});
     if(!r.ok)return undefined;
     return await r.json();
   }catch(e){return undefined;}
@@ -264,9 +315,43 @@ async function dbPut(path,val){
   if(!r.ok)throw new Error('Falha ao salvar');
   return r.json();
 }
-async function dbPatch(val){
-  const r=await fetch(DB+'/.json',{method:'PATCH',body:JSON.stringify(val)});
-  if(!r.ok)throw new Error('Falha ao salvar');
+
+/* Transação otimista do Firebase Realtime Database via ETag.
+   O PUT só é aceito se NINGUÉM tiver alterado a lista desde o GET.
+   Em caso de conflito HTTP 412, lê novamente e revalida a operação.
+   IMPORTANTE: isso impede perda por corrida, mas NÃO substitui regras seguras
+   nem isola os dados pessoais dos clientes. */
+function normalizeBookings(raw){
+  return Array.isArray(raw)?raw.filter(Boolean):
+    (raw&&typeof raw==='object'?Object.values(raw).filter(Boolean):[]);
+}
+async function mutateBookings(change,maxAttempts=6){
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    const r=await fetch(DB+'/bookings.json',{headers:{'X-Firebase-ETag':'true'},cache:'no-store'});
+    if(!r.ok)throw new Error('Não foi possível consultar os agendamentos ('+r.status+').');
+    const tag=r.headers.get('ETag');
+    if(!tag)throw new Error('O servidor não forneceu ETag; gravação cancelada para proteger reservas.');
+    const list=normalizeBookings(await r.json());
+    const next=change(list);
+    if(!Array.isArray(next))throw new Error('Atualização de agendamento inválida.');
+    const w=await fetch(DB+'/bookings.json',{
+      method:'PUT',headers:{'If-Match':tag,'Content-Type':'application/json'},
+      body:JSON.stringify(next)
+    });
+    if(w.status===412)continue;
+    if(!w.ok)throw new Error('Não foi possível salvar os agendamentos ('+w.status+').');
+    bookings=next;
+    return next;
+  }
+  throw new Error('Muitas alterações simultâneas. Tente novamente.');
+}
+async function dbPost(path,val){
+  /* ID aleatório e gravação em filho novo: regras bloqueiam substituição de avaliações */
+  const random=new Uint8Array(12);
+  crypto.getRandomValues(random);
+  const id='r'+Date.now().toString(36)+'_'+Array.from(random,b=>b.toString(16).padStart(2,'0')).join('');
+  const r=await fetch(DB+path+'/'+id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});
+  if(!r.ok)throw new Error('Falha ao salvar avaliação ('+r.status+').');
   return r.json();
 }
 async function getSv(){
@@ -277,7 +362,7 @@ async function getSv(){
 function netErr(){alert('Sem conexão com a internet agora. Tente novamente em instantes.');}
 
 const DAYS=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-let cfg={whatsapp:'',instagram:'',password:'alfa123',start:'09:00',end:'19:00',slotMin:30,
+let cfg={whatsapp:'',instagram:'',password:'',start:'09:00',end:'19:00',slotMin:30,
   days:[false,true,true,true,true,true,true]};
 let services=[
   {id:1,name:'Corte de Cabelo',price:30,dur:40},
@@ -296,7 +381,12 @@ const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMo
 const overlaps=(s1,e1,s2,e2)=>s1<e2&&s2<e1;
 const svc=id=>services.find(s=>s.id==id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function waLink(msg){const n=(cfg.whatsapp||'').replace(/\D/g,'');return n?('https://wa.me/55'+n+(msg?'?text='+encodeURIComponent(msg):'')):'#';}
+function waLink(msg){
+  let n=String(cfg.whatsapp||'').replace(/\D/g,'');
+  if(n.length===10||n.length===11)n='55'+n;
+  if(!/^55\d{10,11}$/.test(n))return '#';
+  return 'https://wa.me/'+n+(msg?'?text='+encodeURIComponent(msg):'');
+}
 function waClient(phone,msg){
   let n=String(phone||'').replace(/\D/g,'');
   if(!n)return '#';
@@ -307,20 +397,24 @@ function waClient(phone,msg){
 
 /* ============ BOOT: carrega dados do banco ============ */
 async function boot(){
-  const data=await dbGet('/');
-  if(data===undefined){renderPublic();renderSlots();return;} /* sem internet: só mostra, não grava NADA */
-  if(data){
-    if(data.cfg)cfg=data.cfg;
-    if(Array.isArray(data.services)&&data.services.length)services=data.services;
-    if(Array.isArray(data.bookings))bookings=data.bookings.filter(Boolean);
-  }
-  /* grava padrões caso o banco esteja vazio */
-  const patch={};
-  if(!data||!data.cfg)patch.cfg=cfg;
-  if(!data||!Array.isArray(data.services)||!data.services.length)patch.services=services;
-  if(!data||!Array.isArray(data.bookings))patch.bookings=bookings;
-  if(Object.keys(patch).length)await dbPatch(patch);
+  /* Carregamento apenas leitura. Nunca cria/reescreve dados no banco ao abrir a página. */
+  try{
+    const [remoteCfg,remoteServices,remoteBookings]=await Promise.all([
+      dbGet('/cfg'),dbGet('/services'),dbGet('/bookings')
+    ]);
+    if(remoteCfg&&typeof remoteCfg==='object')cfg={...cfg,...remoteCfg};
+    if(remoteServices!==undefined&&remoteServices!==null){
+      const list=Array.isArray(remoteServices)?remoteServices:Object.values(remoteServices);
+      if(list.some(x=>x&&x.name))services=list.filter(Boolean);
+    }
+    if(remoteBookings!==undefined)bookings=normalizeBookings(remoteBookings);
+    if(remoteBookings===undefined)showBookingStatus('⚠️ Não foi possível consultar a agenda. Verifique sua conexão antes de agendar.');
+  }catch(e){showBookingStatus('⚠️ Sem conexão com a agenda.');}
   renderPublic();renderSlots();
+  refreshReviews();
+}
+function showBookingStatus(msg){
+  document.getElementById('bkError').innerHTML='<div class="notice err" style="margin-top:14px">'+esc(msg)+'</div>';
 }
 
 /* ============ PUBLIC RENDER ============ */
@@ -328,15 +422,17 @@ const svcOk=()=>services.filter(x=>x&&x.name&&String(x.name).trim());
 function renderPublic(){
   document.getElementById('servicesGrid').innerHTML=svcOk().map(s=>
     `<div class="card"><h3>${esc(s.name)}</h3><div class="price gold-text">R$ ${Number(s.price).toFixed(2).replace('.',',')}</div><div class="dur">⏱ ${s.dur} minutos</div></div>`).join('');
+  const previousService=document.getElementById('bkService').value;
   document.getElementById('bkService').innerHTML=svcOk().map(s=>
-    `<option value="${s.id}">${esc(s.name)} — R$ ${Number(s.price).toFixed(2).replace('.',',')} (${s.dur}min)</option>`).join('');
+    `<option value="${Number(s.id)}">${esc(s.name)} — R$ ${Number(s.price).toFixed(2).replace('.',',')} (${s.dur}min)</option>`).join('');
+  if([...document.getElementById('bkService').options].some(o=>o.value===previousService))document.getElementById('bkService').value=previousService;
   const d=document.getElementById('bkDate');d.min=todayISO();
   const mx=new Date();mx.setDate(mx.getDate()+7);
   d.max=mx.getFullYear()+'-'+String(mx.getMonth()+1).padStart(2,'0')+'-'+String(mx.getDate()).padStart(2,'0');
   const wa=waLink('Olá! Vim pelo site da Alfa Barbearia e gostaria de mais informações.');
   document.getElementById('floatWa').href=wa;
   document.getElementById('footWa').href=wa;
-  document.getElementById('footIg').href=cfg.instagram||'#';
+  document.getElementById('footIg').href=/^https:\/\/[^\s/]+/i.test(cfg.instagram||'')?(cfg.instagram):'#';
   const wd=cfg.days.map((v,i)=>v?DAYS[i].slice(0,3):null).filter(Boolean).join(', ');
   document.getElementById('footHours').innerHTML='Funcionamento: <b style="color:var(--gold)">'+wd+'</b> · '+cfg.start+' às '+cfg.end;
 }
@@ -350,6 +446,8 @@ function renderSlots(){
   box.innerHTML='';selSlot=null;
   const date=document.getElementById('bkDate').value;
   if(!date){box.innerHTML='<p class="slot-empty">Selecione uma data para ver os horários.</p>';return;}
+  const dateField=document.getElementById('bkDate');
+  if(date<dateField.min||date>dateField.max){box.innerHTML='<p class="slot-empty">Escolha uma data dentro dos próximos 7 dias.</p>';return;}
   const dow=new Date(date+'T12:00:00').getDay();
   const daysOpen=(Array.isArray(cfg.days)&&cfg.days.length===7)?cfg.days:[1,1,1,1,1,1,0];
   if(!daysOpen[dow]){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
@@ -430,14 +528,13 @@ async function submitBooking(){
   const fail=m=>err.innerHTML='<div class="notice err" style="margin-top:14px">'+m+'</div>';
   if(!date)return fail('Selecione a data do atendimento.');
   if(date<todayISO())return fail('Não é possível agendar em datas passadas.');
+  const dateField=document.getElementById('bkDate');
+  if(date>dateField.max)return fail('Agendamentos disponíveis somente para os próximos 7 dias.');
   if(!cfg.days[new Date(date+'T12:00:00').getDay()])return fail('Não atendemos neste dia da semana.');
   if(!selSlot)return fail('Escolha um horário disponível.');
   if(!name)return fail('Informe seu nome.');
-  if(!phone)return fail('Informe seu WhatsApp com DDD.');
+  if(!/^\d{10,11}$/.test(phone.replace(/\D/g,'')))return fail('Informe um WhatsApp válido com DDD (10 ou 11 números).');
   savingBk=true;
-  /* busca a versão mais recente dos agendamentos antes de gravar */
-  let list;
-  try{list=await getBk();}catch(e){savingBk=false;netErr();return;}
   const st=toMin(selSlot);
   const dowBk=new Date(date+'T12:00:00').getDay();
   if(date===todayISO()){
@@ -451,26 +548,27 @@ async function submitBooking(){
   addRB((dHB&&(dHB.s1||dHB.s))||cfg.start,(dHB&&(dHB.e1||dHB.e))||cfg.end);
   addRB(dHB&&dHB.s2,dHB&&dHB.e2);
   if(!rangesBk.some(r=>st>=r[0]&&st+s.dur<=r[1])){savingBk=false;return fail('⛔ Fora do expediente deste dia (ou não cabe antes do fechamento). Escolha outro horário.');}
-  if(list.some(b=>b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+b.dur))){
-    savingBk=false;
-    bookings=list;
-    renderSlots();
-    return fail('Este horário acabou de ser ocupado. Escolha outro.');
-  }
-  const bk={id:Date.now(),serviceId:s.id,service:s.name,price:s.price,dur:s.dur,date,time:selSlot,name,phone};
-  let waWin=null;try{waWin=window.open('about:blank','_blank');}catch(e){} /* abre a aba já no clique para o navegador permitir o redirecionamento depois */
+  const bk={id:Date.now()*1000+Math.floor(Math.random()*1000),serviceId:s.id,service:s.name,price:s.price,dur:s.dur,date,time:selSlot,name,phone};
+  let waWin=null;try{waWin=window.open('about:blank','_blank');}catch(e){} /* tenta abrir WhatsApp após a confirmação */
   try{
-    await dbPut('/bookings',[...list,bk]);
-    bookings=[...list,bk];
-  }catch(e){if(waWin)try{waWin.close();}catch(_){}savingBk=false;netErr();return;}
+    await mutateBookings(list=>{
+      if(list.some(b=>b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+Number(b.dur||0)))){
+        const conflict=new Error('Este horário acabou de ser ocupado. Escolha outro.');conflict.isBookingConflict=true;throw conflict;
+      }
+      return [...list,bk];
+    });
+  }catch(e){
+    if(waWin)try{waWin.close();}catch(_){}
+    savingBk=false;
+    if(e.isBookingConflict){renderSlots();return fail(e.message);}
+    return fail('Não foi possível confirmar. '+esc(e.message||'Verifique a conexão.'));
+  }
   savingBk=false;
   const msg='✅ *AGENDAMENTO CONFIRMADO — ALFA BARBEARIA*\n\n👤 Cliente: '+name+'\n💈 Serviço: '+s.name+'\n📅 Data: '+date.split('-').reverse().join('/')+' às '+selSlot+'\n💰 Valor: R$ '+s.price.toFixed(2).replace('.',',')+'\n\nAté breve!';
   document.getElementById('doneMsg').innerHTML='<b style="color:var(--gold)">'+esc(s.name)+'</b> · '+date.split('-').reverse().join('/')+' às <b>'+selSlot+'</b><br>Cliente: '+esc(name);
   const wa=waLink(msg);
   document.getElementById('doneWa').href=wa;
   if(waWin){try{waWin.location.href=wa;}catch(e){waWin=null;}} /* abre o WhatsApp com a confirmação automaticamente */
-  /* push via ntfy: avisa o barbeiro no iPhone/Android mesmo com tudo fechado */
-  try{fetch('https://ntfy.sh/alfa-barbearia-75',{method:'POST',mode:'no-cors',body:'💈 Novo agendamento — Alfa Barbearia\nCliente: '+name+'\nServiço: '+s.name+'\nData: '+date.split('-').reverse().join('/')+' às '+selSlot+'\nR$ '+s.price.toFixed(2).replace('.',',')});}catch(e){}
   document.getElementById('bookingForm').classList.add('hidden');
   document.getElementById('bookingDone').classList.remove('hidden');
   document.getElementById('bookingDone').scrollIntoView({behavior:'smooth',block:'center'});
@@ -541,8 +639,8 @@ function renderTabAg(){
       +(atendido?' <span class="badge" style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71">✅ Atendido</span>':'')
       +'<br><span style="color:var(--muted);font-size:13px">'+esc(b.name)+' · 📱 '+esc(b.phone)+'</span></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-      +'<select onchange="changeService('+b.id+',this.value)" title="Trocar serviço" style="background:#161616;color:var(--gold);border:1px solid #444;border-radius:8px;padding:8px;font-size:13px;max-width:100%">'
-      +svcOk().map(x=>'<option value="'+x.id+'" '+(String(x.id)===String(b.serviceId)?'selected':'')+'>'+x.name+' · R$'+x.price+'</option>').join('')
+      +'<select onchange="changeService('+Number(b.id)+',this.value)" title="Trocar serviço" style="background:#161616;color:var(--gold);border:1px solid #444;border-radius:8px;padding:8px;font-size:13px;max-width:100%">'
+      +svcOk().map(x=>'<option value="'+Number(x.id)+'" '+(String(x.id)===String(b.serviceId)?'selected':'')+'>'+esc(x.name)+' · R$'+Number(x.price).toFixed(2).replace('.',',')+'</option>').join('')
       +'</select>'
       +'<a class="btn btn-outline" style="padding:7px 14px;font-size:13px" target="_blank" href="'+waClient(b.phone,'Olá '+b.name+'! Aqui é da Alfa Barbearia. Seu horário está confirmado para '+b.date.split('-').reverse().join('/')+' às '+b.time+'. Qualquer imprevisto, me avise!')+'">WhatsApp</a>'
       +(podeConfirmar?'<button class="btn" style="padding:7px 14px;font-size:13px;border-color:#2ecc71;color:#2ecc71" onclick="doneBk('+b.id+')">✅ Confirmar corte</button>':'')
@@ -587,8 +685,7 @@ async function clearOld(){
     const valorNC=naoConf.reduce((a,b)=>a+Number(b.price||0),0);
     const aviso=naoConf.length?'\n\n⚠️ '+naoConf.length+' deles NÃO foram confirmados (R$ '+valorNC.toFixed(2).replace('.',',')+' não contabilizado). Confirme-os antes se já foram atendidos.':'';
     if(!confirm('Apagar '+oldC+' agendamento(s) antigo(s)? Essa ação não pode ser desfeita.'+aviso))return;
-    bookings=latest.filter(b=>b.date>=todayISO());
-    await dbPut('/bookings',bookings);
+    await mutateBookings(list=>list.filter(b=>b.date>=todayISO()));
     renderTabAg();alert('Histórico antigo apagado!');
   }catch(e){netErr();}
 }
@@ -597,14 +694,13 @@ async function changeService(id,sid){
   const sv=svcOk().find(x=>String(x.id)===String(sid));if(!sv)return;
   if(!confirm('Trocar o serviço de "'+b.service+'" para "'+sv.name+'" (R$ '+sv.price.toFixed(2).replace('.',',')+')?')){renderAdmin();return;}
   try{
-    const latest=await getBk();
-    const target=latest.find(x=>x.id===id);if(!target)return;
-    const st=toMin(target.time);
-    const bate=latest.find(x=>x.id!==id&&x.date===target.date&&overlaps(st,st+sv.dur,toMin(x.time),toMin(x.time)+x.dur));
-    if(bate){alert('⛔ "'+sv.name+'" dura '+sv.dur+' min e bate com o agendamento das '+bate.time+' ('+bate.name+'). Remarque um dos dois antes de trocar o serviço.');renderAdmin();return;}
-    target.serviceId=sv.id;target.service=sv.name;target.price=sv.price;target.dur=sv.dur;
-    await dbPut('/bookings',latest);
-    bookings=latest;
+    await mutateBookings(list=>{
+      const target=list.find(x=>x.id===id);if(!target)throw new Error('Agendamento não encontrado.');
+      const st=toMin(target.time);
+      const bate=list.find(x=>x.id!==id&&x.date===target.date&&overlaps(st,st+sv.dur,toMin(x.time),toMin(x.time)+x.dur));
+      if(bate)throw new Error('O serviço coincide com o agendamento das '+bate.time+'. Remarque antes.');
+      return list.map(x=>x.id===id?{...x,serviceId:sv.id,service:sv.name,price:sv.price,dur:sv.dur}:x);
+    });
     renderAdmin();
   }catch(e){netErr();}
 }
@@ -612,20 +708,20 @@ async function doneBk(id){
   const b=bookings.find(x=>x.id===id);if(!b)return;
   if(!confirm('Confirmar que '+b.name+' já foi atendido? O valor entra em "Recebido".'))return;
   try{
-    const latest=await getBk(); /* pega a versão mais recente do banco pra não apagar agendamentos novos */
-    const target=latest.find(x=>x.id===id);if(!target)return;
-    target.done=true;
-    await dbPut('/bookings',latest);
-    bookings=latest;
+    await mutateBookings(list=>{
+      if(!list.some(x=>x.id===id))throw new Error('Agendamento não encontrado.');
+      return list.map(x=>x.id===id?{...x,done:true}:x);
+    });
     renderAdmin();
   }catch(e){netErr();}
 }
 async function cancelBk(id){
   if(!confirm('Cancelar este agendamento?'))return;
   try{
-    bookings=await getBk();
-    bookings=bookings.filter(b=>b.id!==id);
-    await dbPut('/bookings',bookings);
+    await mutateBookings(list=>{
+      if(!list.some(b=>b.id===id))throw new Error('Agendamento já foi removido.');
+      return list.filter(b=>b.id!==id);
+    });
     renderTabAg();renderPublic();renderSlots();
     alert('Agendamento cancelado.');
   }catch(e){netErr();}
@@ -666,9 +762,15 @@ async function rsConfirm(){
   const nd=document.getElementById('rsDate').value,nt=document.getElementById('rsTime').value;
   if(!confirm('Remarcar '+rsB.name+' para '+nd.split('-').reverse().join('/')+' às '+nt+'?'))return;
   try{
-    const latest=await getBk();
-    bookings=latest.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
-    await dbPut('/bookings',bookings);rsClose();renderAdmin();renderSlots();
+    await mutateBookings(list=>{
+      const target=list.find(x=>x.id===rsB.id);
+      if(!target)throw new Error('Agendamento já foi removido.');
+      const start=toMin(nt);
+      if(list.some(x=>x.id!==target.id&&x.date===nd&&overlaps(start,start+Number(target.dur),toMin(x.time),toMin(x.time)+Number(x.dur)))){
+        throw new Error('O novo horário foi ocupado por outra pessoa.');
+      }
+      return list.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
+    });rsClose();renderAdmin();renderSlots();
   }catch(e){netErr();}
 }
 function renderTabSv(){
@@ -776,7 +878,7 @@ function renderTabCfg(){
     +'<hr style="border:none;border-top:1px solid #333;margin:24px 0 16px">'
     +'<label>Notificações de novo agendamento</label>'
     +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 4px"><button id="btnNotif" onclick="enableNotif()" style="background:rgba(232,197,107,.1);border:1px solid var(--gold);color:var(--gold);padding:10px 18px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer">🔔 Ativar notificações</button></div>'
-    +'<small style="color:var(--muted)">Avisa neste aparelho quando um cliente agendar (Android/PC, com o painel aberto).</small>';
+    +'<small style="color:var(--muted)">Avisa neste aparelho quando um cliente agendar (com o painel aberto e permissão do navegador).</small>';
   updateNotifBtn();
 }
 async function saveCfg(){
@@ -786,7 +888,7 @@ async function saveCfg(){
     fresh.whatsapp=document.getElementById('cfgWa').value.replace(/\D/g,'');
     fresh.instagram=document.getElementById('cfgIg').value.trim();
     const np=document.getElementById('cfgPass').value;
-    if(np){if(np.length<4){document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">A senha deve ter ao menos 4 caracteres.</div>';return;}fresh.password=np;}
+    if(np){if(np.length<8){document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">A senha deve ter ao menos 8 caracteres.</div>';return;}fresh.password=np;}
     await dbPut('/cfg',fresh);
     cfg=fresh;
     renderPublic();
@@ -794,44 +896,108 @@ async function saveCfg(){
   }catch(e){netErr();}
 }
 
+/* ============ AVALIAÇÕES (Firebase RTDB: /reviews) ============ */
+let reviewStars=0;
+let reviewItems=[];
+let reviewLimit=8;
+let reviewSending=false;
+const starButtons=[...document.querySelectorAll('#rvStars .review-star')];
+starButtons.forEach(b=>b.addEventListener('click',()=>setReviewStars(Number(b.dataset.stars))));
+function setReviewStars(n){
+  reviewStars=n;
+  starButtons.forEach(b=>{
+    const active=Number(b.dataset.stars)<=n;
+    b.classList.toggle('selected',active);
+    b.setAttribute('aria-pressed',String(Number(b.dataset.stars)===n));
+  });
+}
+function reviewNotice(message,ok=false){
+  document.getElementById('rvMessage').innerHTML='<div class="notice '+(ok?'ok':'err')+'" style="margin-top:14px">'+esc(message)+'</div>';
+}
+function reviewDate(v){
+  const t=Number(v);
+  if(!Number.isFinite(t)||t<946684800000||t>Date.now()+86400000)return '';
+  return new Date(t).toLocaleDateString('pt-BR');
+}
+function renderReviews(){
+  const valid=reviewItems.filter(r=>r&&Number.isInteger(r.stars)&&r.stars>=1&&r.stars<=5&&typeof r.name==='string');
+  const count=valid.length;
+  const mean=count?valid.reduce((sum,r)=>sum+r.stars,0)/count:0;
+  document.getElementById('rvSummary').innerHTML=count?
+    '<div class="review-average">'+mean.toFixed(1).replace('.',',')+' <span style="font-size:22px">★</span></div><p style="color:var(--muted);margin-bottom:22px">'+count+' avaliação(ões) recebida(s)</p>':
+    '<p class="notice info">Ainda não há avaliações. Seja o primeiro a avaliar!</p>';
+  const latest=[...valid].sort((a,b)=>Number(b.createdAt||0)-Number(a.createdAt||0));
+  document.getElementById('rvEntries').innerHTML=latest.slice(0,reviewLimit).map(r=>
+    '<article class="review-entry"><div><strong>'+esc(r.name)+'</strong><span class="review-meta"> · '+esc(reviewDate(r.createdAt))+'</span></div>'+
+    '<div style="color:var(--gold);font-size:20px" aria-label="'+r.stars+' de 5 estrelas">'+('★'.repeat(r.stars))+'<span style="color:#676767">'+('★'.repeat(5-r.stars))+'</span></div>'+
+    (r.comment?'<p>'+esc(r.comment)+'</p>':'')+'</article>'
+  ).join('');
+  document.getElementById('rvMore').classList.toggle('hidden',latest.length<=reviewLimit);
+}
+async function refreshReviews(){
+  const raw=await dbGet('/reviews');
+  if(raw===undefined){
+    document.getElementById('rvSummary').innerHTML='<div class="notice err">Não foi possível carregar as avaliações agora.</div>';
+    return;
+  }
+  reviewItems=raw?(Array.isArray(raw)?raw.filter(Boolean):Object.values(raw).filter(Boolean)):[];
+  renderReviews();
+}
+function showMoreReviews(){reviewLimit+=8;renderReviews();}
+async function submitReview(){
+  if(reviewSending)return;
+  const name=document.getElementById('rvName').value.trim();
+  const comment=document.getElementById('rvComment').value.trim();
+  if(document.getElementById('rvWebsite').value)return; /* campo-isca antirrobô */
+  if(name.length<2||name.length>60)return reviewNotice('Informe um nome de 2 a 60 caracteres.');
+  if(!Number.isInteger(reviewStars)||reviewStars<1||reviewStars>5)return reviewNotice('Selecione de 1 a 5 estrelas.');
+  if(comment.length>500)return reviewNotice('O comentário deve ter no máximo 500 caracteres.');
+  let last=0;
+  try{last=Number(localStorage.getItem('alfaReviewLast')||0);}catch(e){}
+  if(last&&Date.now()-last<86400000)return reviewNotice('Já recebemos uma avaliação deste navegador recentemente. Tente novamente amanhã.');
+  reviewSending=true;
+  document.getElementById('rvSubmit').disabled=true;
+  try{
+    await dbPost('/reviews',{name,comment,stars:reviewStars,createdAt:{'.sv':'timestamp'}});
+    try{localStorage.setItem('alfaReviewLast',String(Date.now()));}catch(e){}
+    document.getElementById('rvName').value='';
+    document.getElementById('rvComment').value='';
+    setReviewStars(0);
+    reviewNotice('Avaliação enviada! Obrigado por compartilhar sua experiência.',true);
+    await refreshReviews();
+  }catch(e){reviewNotice('Não foi possível salvar sua avaliação. Verifique se as regras de /reviews estão instaladas e tente novamente.');}
+  finally{reviewSending=false;document.getElementById('rvSubmit').disabled=false;}
+}
+
 /* ============ INIT ============ */
 document.getElementById('bkService').addEventListener('change',renderSlots);
 boot();
 
-/* ============ ATUALIZAÇÃO AUTOMÁTICA (quase tempo real) ============ */
-/* Recarrega os agendamentos do Firebase sem precisar dar F5:
-   - a cada 30 segundos
-   - quando o cliente volta para a aba/janela do site */
+/* ============ ATUALIZAÇÃO AUTOMÁTICA (15 s e ao voltar à aba) ============ */
+/* Consulta novas reservas sem apagar registros antigos automaticamente. */
+let refreshingBookings=false;
 async function refreshBookings(){
-  const data=await dbGet('/');
-  if(!data)return;
-  lastWeekTotal=(data.lastWeek&&typeof data.lastWeek.total==='number')?data.lastWeek.total:null;
-  {
-    const bk=Array.isArray(data.bookings)?data.bookings:(data.bookings&&typeof data.bookings==='object'?Object.values(data.bookings):[]);
-    bookings=bk.filter(Boolean);
-    checkNewBk();
-    /* limpeza semanal (segunda): apaga SOMENTE os atendimentos confirmados (✅) de antes desta semana.
-       Agendamentos antigos NÃO confirmados ficam guardados até você confirmar ou cancelar. */
-    if(typeof admOk!=='undefined'&&admOk){
-      const m=mondayISO();
-      if(bookings.some(b=>b.date<m&&b.done)){
-        try{
-          const latest=await getBk(); /* versão fresca: nunca apaga agendamento novo por engano */
-          const gone=latest.filter(b=>b.date<m&&b.done);
-          if(gone.length){
-            const kept=latest.filter(b=>!(b.date<m&&b.done));
-            await dbPut('/bookings',kept);
-            const tot=gone.reduce((a,b)=>a+Number(b.price||0),0);
-            dbPut('/lastWeek',{total:tot,week:m}).catch(()=>{});
-            bookings=kept;
-          }
-        }catch(e){}
-      }
+  if(refreshingBookings)return;
+  refreshingBookings=true;
+  try{
+    const [freshBookings,freshCfg,freshSv,freshLastWeek]=await Promise.all([
+      dbGet('/bookings'),dbGet('/cfg'),dbGet('/services'),dbGet('/lastWeek')
+    ]);
+    if(freshBookings===undefined)return; /* nunca confunde erro de rede com lista vazia */
+    bookings=normalizeBookings(freshBookings);
+    if(freshCfg&&typeof freshCfg==='object')cfg={...cfg,...freshCfg};
+    if(freshSv){
+      const items=Array.isArray(freshSv)?freshSv:Object.values(freshSv);
+      if(items.length)services=items.filter(Boolean);
     }
-    renderSlots(); /* atualiza a grade na hora, se o cliente estiver nela */
-    if(typeof admOk!=='undefined'&&admOk)renderAdmin(); /* atualiza o painel do barbeiro se estiver aberto */
-  }
+    renderPublic();
+    lastWeekTotal=(freshLastWeek&&typeof freshLastWeek.total==='number')?freshLastWeek.total:null;
+    checkNewBk();
+    renderSlots();
+    if(admOk)renderAdmin();
+  }finally{refreshingBookings=false;}
 }
+
 function mondayISO(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 /* ===== notificações de novo agendamento ===== */
 let bkSeen=null;let oldOpen=false;let lastWeekTotal=null; /* histórico expandido? mantém aberto entre atualizações */
@@ -863,8 +1029,9 @@ function checkNewBk(){
 }
 updateNotifBtn();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-setInterval(refreshBookings,30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshBookings();});
+setInterval(()=>refreshBookings().catch(()=>{}),15000);
+setInterval(()=>refreshReviews().catch(()=>{}),60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshBookings().catch(()=>{});refreshReviews().catch(()=>{});}});
 </script>
 <div id="rsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;padding:16px;overflow:auto">
   <div style="max-width:420px;margin:30px auto;background:#1b1b1b;border:1px solid #444;border-radius:16px;padding:20px">
