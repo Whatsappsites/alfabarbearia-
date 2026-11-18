@@ -279,9 +279,10 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
         <h3 style="color:var(--gold);margin-bottom:10px">Backup e recuperação de agendamentos</h3>
         <p style="color:var(--muted);margin-bottom:16px">Sem Google Drive. As cópias são guardadas somente neste navegador, quando você abre o painel, e podem ser baixadas em JSON para guardar em um local privado.</p>
         <button class="btn btn-gold" type="button" onclick="downloadBackupAgora()">⬇ Baixar backup agora (JSON)</button>
-        <button class="btn btn-outline" type="button" style="margin-top:8px" onclick="renderBackupPanel()">↻ Atualizar cópias</button>
+        <button class="btn btn-outline" type="button" style="margin-top:8px" onclick="salvarNovaCopiaAgora()">↻ Salvar nova cópia agora</button>
         <p style="color:var(--muted);font-size:13px;margin:14px 0 6px">O backup automático local é tentado uma vez por dia <b>somente com o painel aberto e dados válidos carregados</b>. Não funciona com o site fechado e não substitui cópias guardadas fora do aparelho.</p>
         <div id="backupMsg" role="status" aria-live="polite" style="font-size:13px;color:var(--gold-light);margin:12px 0"></div>
+        <p style="font-size:13px;color:var(--muted);margin:8px 0 16px">“Salvar nova cópia agora” consulta a agenda atual e cria um novo backup. A data e a quantidade de agendamentos aparecem abaixo depois que a cópia é conferida. O botão de baixar também gera uma cópia atualizada.</p>
         <div id="backupList" style="margin-top:14px"></div>
         <div class="notice info" style="margin-top:14px">Se o banco estiver vazio ou a conexão falhar, nenhuma cópia vazia será criada. Não há restauração automática: baixe a cópia que deseja recuperar e confira os dados antes de restaurar no Firebase.</div>
       </div>
@@ -327,7 +328,21 @@ async function dbPut(path,val){
    nem isola os dados pessoais dos clientes. */
 function normalizeBookings(raw){
   return Array.isArray(raw)?raw.filter(Boolean):
-    (raw&&typeof raw==='object'?Object.values(raw).filter(Boolean):[]);
+    (raw&&typeof raw==='object'&&!Array.isArray(raw)?Object.values(raw).filter(Boolean):[]);
+}
+/* Impede que reservas danificadas sejam ignoradas nos testes de ocupação.
+   Uma reserva incompleta NÃO deve ser sobrescrita ou tratada como horário livre. */
+function bookingValido(b){
+  if(!b||typeof b!=='object'||Array.isArray(b)||
+     !Number.isSafeInteger(Number(b.id))||
+     typeof b.date!=='string'||!/^(\d{4})-(\d{2})-(\d{2})$/.test(b.date)||
+     typeof b.time!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(b.time)||
+     !Number.isFinite(Number(b.dur))||Number(b.dur)<=0)return false;
+  const d=new Date(b.date+'T12:00:00');
+  return !Number.isNaN(d.getTime()) &&
+    d.getFullYear()===Number(b.date.slice(0,4)) &&
+    d.getMonth()+1===Number(b.date.slice(5,7)) &&
+    d.getDate()===Number(b.date.slice(8,10));
 }
 async function mutateBookings(change,maxAttempts=6){
   for(let attempt=0;attempt<maxAttempts;attempt++){
@@ -341,8 +356,8 @@ async function mutateBookings(change,maxAttempts=6){
     if(raw!==null&&!Array.isArray(raw))
       throw new Error('Formato inesperado dos agendamentos. A gravação foi bloqueada para proteger os dados. Faça uma cópia de segurança antes de continuar.');
     const list=normalizeBookings(raw);
-    if(list.some(b=>!b||!Number.isSafeInteger(Number(b.id))||!b.date||!b.time))
-      throw new Error('Existem reservas incompletas no banco. Escrita bloqueada para proteger os dados.');
+    if(list.some(b=>!bookingValido(b)))
+      throw new Error('Há agendamentos com data, horário ou duração inválidos. Gravação interrompida para preservar os dados.');
     const next=change(list);
     if(!Array.isArray(next))throw new Error('Atualização de agendamento inválida.');
     /* Salvaguarda: uma mudança não pode sumir com nenhum ID que já existia. */
@@ -404,6 +419,12 @@ function applyBookingRead(result){
     /* Não limpa bookings em caso de erro. */
     return false;
   }
+  if(result.data!==null&&(typeof result.data!=='object'||Array.isArray(result.data)&&result.data.some(b=>b!==null&&!bookingValido(b))||
+      !Array.isArray(result.data)&&Object.values(result.data).some(b=>b!==null&&!bookingValido(b)))){
+    bookingReadState='error';
+    bookingReadError='A agenda retornou dados em formato inesperado. Nenhum dado local foi descartado.';
+    return false;
+  }
   bookingReadState=result.data===null?'empty':'ok';
   bookingReadError='';
   bookings=normalizeBookings(result.data);
@@ -417,6 +438,7 @@ function applyBookingRead(result){
 const LOCAL_BACKUP_DB='alfa-barbearia-agenda-local-v1';
 let backupAutomaticoOcupado=false;
 let ultimoAvisoBackup='';
+let backupManualEmAndamento=false;
 function avisoBackup(msg){
   ultimoAvisoBackup=msg;
   const el=document.getElementById('backupMsg');
@@ -459,7 +481,11 @@ function criarPacoteBackup(lista){
 async function buscarReservasParaBackup(){
   const r=await readBookingsOnly();
   if(!r.ok)throw new Error('Falha na leitura do Firebase: '+r.error);
+  if(r.data!==null&&typeof r.data!=='object')
+    throw new Error('Formato inesperado no banco. Backup cancelado para evitar cópia incompleta.');
   const lista=normalizeBookings(r.data);
+  if(lista.some(b=>!bookingValido(b)))
+    throw new Error('Há reservas com campos inválidos. Faça uma exportação de segurança diretamente pelo Console antes de continuar.');
   if(!lista.length)throw new Error('A agenda está vazia. Nenhuma cópia vazia foi feita; as cópias anteriores foram preservadas.');
   return lista;
 }
@@ -471,19 +497,42 @@ function baixarArquivoBackup(pacote){
   a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-async function downloadBackupAgora(){
-  if(!admOk)return;
-  avisoBackup('Consultando o Firebase para gerar o arquivo…');
+/* Confirmar o backup exige abrir a cópia novamente, e não apenas aguardar o comando salvar. */
+async function conferirCopiaSalva(id,pacote){
+  const salva=await executarNoBackup('readonly',s=>s.get(id));
+  if(!salva||salva.exportedAt!==pacote.exportedAt||
+      salva.quantidade!==pacote.quantidade||
+      JSON.stringify(salva.bookings)!==JSON.stringify(pacote.bookings))
+    throw new Error('A cópia não passou na verificação de leitura após salvar.');
+  return salva;
+}
+const quantidadeAtivaBackup=p=>(p.bookings||[]).filter(bookingAtivo).length;
+async function gerarBackupManual(baixar){
+  if(!admOk||backupManualEmAndamento)return;
+  backupManualEmAndamento=true;
+  avisoBackup('Consultando os agendamentos atuais e criando uma nova cópia…');
   try{
     const lista=await buscarReservasParaBackup();
-    const p=criarPacoteBackup(lista);
-    baixarArquivoBackup(p);
-    try{await executarNoBackup('readwrite',s=>s.add({...p,id:'manual:'+p.exportedAt}));}
-    catch(e){avisoBackup('Download solicitado com '+p.quantidade+' registros. Não foi possível guardar uma cópia no navegador: '+e.message);renderBackupPanel();return;}
-    avisoBackup('Download solicitado com '+p.quantidade+' agendamentos. Guarde o JSON em uma pasta privada fora deste dispositivo.');
-    renderBackupPanel();
-  }catch(e){avisoBackup('Não foi possível gerar backup: '+e.message);}
+    const pacote=criarPacoteBackup(lista);
+    const id='manual:'+pacote.exportedAt+':'+Math.random().toString(36).slice(2);
+    let erroLocal=null;
+    try{
+      await executarNoBackup('readwrite',s=>s.add({...pacote,id}));
+      await conferirCopiaSalva(id,pacote);
+    }catch(e){erroLocal=e;}
+    if(baixar){baixarArquivoBackup(pacote);}
+    if(erroLocal){
+      avisoBackup((baixar?'Download solicitado, mas o backup NÃO foi confirmado neste navegador. ':'Não foi possível confirmar o backup no navegador. ')+erroLocal.message);
+    }else{
+      const dt=new Date(pacote.exportedAt).toLocaleString('pt-BR');
+      avisoBackup('✓ Cópia nova salva e conferida: '+dt+' · '+quantidadeAtivaBackup(pacote)+' agendamento(s) ativo(s) · '+pacote.quantidade+' registro(s) preservado(s).'+(baixar?' Download solicitado; confira a pasta Downloads.':' Para guardar fora do navegador, use “Baixar JSON”.'));
+    }
+    await renderBackupPanel();
+  }catch(e){avisoBackup('Backup não atualizado: '+e.message);}
+  finally{backupManualEmAndamento=false;}
 }
+async function downloadBackupAgora(){return gerarBackupManual(true);}
+async function salvarNovaCopiaAgora(){return gerarBackupManual(false);}
 async function tentarBackupAutomaticoLocal(){
   if(!admOk||backupAutomaticoOcupado)return;
   backupAutomaticoOcupado=true;
@@ -494,7 +543,8 @@ async function tentarBackupAutomaticoLocal(){
     const lista=await buscarReservasParaBackup();
     const pacote=criarPacoteBackup(lista);
     await executarNoBackup('readwrite',s=>s.add({...pacote,id}));
-    avisoBackup('Cópia local diária criada: '+lista.length+' agendamentos. Baixe-a para manter uma cópia fora do navegador.');
+    await conferirCopiaSalva(id,pacote);
+    avisoBackup('Cópia diária salva e conferida: '+new Date(pacote.exportedAt).toLocaleString('pt-BR')+' · '+quantidadeAtivaBackup(pacote)+' agendamentos ativos. Baixe o JSON para guardar uma cópia fora do navegador.');
     renderBackupPanel();
   }catch(e){
     // Falha/vazio NUNCA sobrescreve cópias anteriores.
@@ -519,14 +569,19 @@ async function renderBackupPanel(){
     const copias=await listarBackupsLocais();
     box.replaceChildren();
     if(!copias.length){box.textContent='Nenhuma cópia local encontrada neste navegador.';return;}
+    const ultima=copias[0];
+    const status=document.createElement('p');
+    status.className='notice info';
+    status.textContent='Última cópia registrada: '+new Date(ultima.exportedAt).toLocaleString('pt-BR')+' · '+quantidadeAtivaBackup(ultima)+' agendamento(s) ativo(s) · '+ultima.quantidade+' registro(s) preservado(s).';
+    box.appendChild(status);
     const titulo=document.createElement('p');
-    titulo.textContent=copias.length+' cópia(s) salva(s) neste aparelho:';
+    titulo.textContent=copias.length+' cópia(s) salva(s) neste aparelho (cada cópia é independente):';
     titulo.style.marginBottom='10px';box.appendChild(titulo);
     for(const c of copias){
       const linha=document.createElement('div');
       linha.style.cssText='display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)';
       const label=document.createElement('span');
-      label.textContent=(c.id.startsWith('auto:')?'Automática':'Manual')+' · '+new Date(c.exportedAt).toLocaleString('pt-BR')+' · '+c.quantidade+' agendamentos';
+      label.textContent=(c.id.startsWith('auto:')?'Automática':'Manual')+' · '+new Date(c.exportedAt).toLocaleString('pt-BR')+' · '+quantidadeAtivaBackup(c)+' ativo(s) · '+c.quantidade+' registro(s) preservado(s)';
       label.style.fontSize='13px';
       const btn=document.createElement('button');btn.className='btn btn-outline';
       btn.style.cssText='font-size:13px;padding:8px 12px';btn.textContent='Baixar JSON';
@@ -765,15 +820,13 @@ function renderTabAg(){
   const box=document.getElementById('tab-ag');
   const t=todayISO();
   const fut=[];let old=0;
-  const cancelados=bookings.filter(b=>b&&b.status==='cancelled');
-  bookingsAtivos().forEach(b=>{if(typeof b.date==='string'&&b.date>=t)fut.push(b);else old++;});
-  const cancelHtml=cancelados.length?'<details style="margin-top:20px"><summary style="cursor:pointer;color:var(--gold)">📁 '+cancelados.length+' cancelado(s) — histórico preservado</summary>'+
-    cancelados.map(b=>'<div class="card" style="margin:10px 0;padding:12px;opacity:.7"><b>'+esc(b.date||'')+' '+esc(b.time||'')+'</b> · '+esc(b.service||'')+' · '+esc(b.name||'')+' <span class="badge">Cancelado</span></div>').join('')+'</details>':'';
+  const ativos=bookingsAtivos();
+  ativos.forEach(b=>{if(typeof b.date==='string'&&b.date>=t)fut.push(b);else old++;});
   const readingError=bookingReadState==='error';
   const diag='<div class="notice '+(readingError?'err':'info')+'" style="margin-bottom:14px">'
     +(readingError?'⚠️ <b>Falha ao ler agendamentos.</b> '+esc(bookingReadError)+'; a lista abaixo pode estar desatualizada.'
       :bookingReadState==='loading'?'⏳ Consultando a Agenda de Clientes…'
-      :'<b>Agenda de Clientes:</b> '+bookings.length+' agendamento(s) salvo(s) · '+fut.length+' para hoje ou datas futuras · '+old+' antigo(s) · '+cancelados.length+' cancelado(s).')
+      :'<b>Agenda de Clientes:</b> '+ativos.length+' agendamento(s) ativo(s) · '+fut.length+' para hoje ou datas futuras · '+old+' antigo(s).')
     +(lastBookingReadAt?' <small style="opacity:.8">Última consulta: '+esc(lastBookingReadAt)+'</small>':'')
     +' <button class="btn btn-outline" style="padding:5px 12px;font-size:12px;margin-left:6px" onclick="refreshBookings().catch(()=>{})">Atualizar agenda</button></div>';
   let top='';
@@ -788,10 +841,10 @@ function renderTabAg(){
       ?'<div class="notice err"><b>Não é possível afirmar que a agenda está vazia.</b> A consulta à agenda falhou. Confira os dados no painel do banco de dados e evite novos agendamentos até corrigir a conexão ou as permissões.</div>'
       :bookingReadState==='loading'
       ?'<div class="notice info">Buscando os agendamentos salvos…</div>'
-      :bookings.length===0
-      ?'<div class="notice info">A consulta à agenda funcionou, mas nenhum agendamento foi encontrado. Confira os dados e as cópias de segurança antes de alterar qualquer informação.</div>'
+      :ativos.length===0
+      ?'<div class="notice info">A consulta à agenda funcionou, mas não existem agendamentos ativos. O histórico permanece preservado no banco.</div>'
       :'<div class="notice info">Não há agendamentos para hoje ou datas futuras. Existem registros antigos; use “antigos ocultos” para consultá-los.</div>';
-    box.innerHTML=diag+top+msg+cancelHtml;
+    box.innerHTML=diag+top+msg;
     if(oldOpen&&old>0)fillOld();
     return;
   }
@@ -830,7 +883,7 @@ function renderTabAg(){
       +'<button class="btn btn-outline" style="padding:7px 14px;font-size:13px" onclick="reschedule('+b.id+')">Remarcar</button>'
       +'<button class="btn btn-danger" onclick="cancelBk('+b.id+')">Cancelar</button></div></div>';
   });
-  box.innerHTML=html+cancelHtml;
+  box.innerHTML=html;
   if(oldOpen)fillOld();
 }
 function toggleOld(){
