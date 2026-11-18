@@ -339,7 +339,7 @@ async function mutateBookings(change,maxAttempts=6){
     /* Se o Firebase retornar um OBJETO com chaves, não o reescrever como array.
        Esse formato precisa ser migrado conscientemente, com backup prévio. */
     if(raw!==null&&!Array.isArray(raw))
-      throw new Error('Formato inesperado em /bookings (objeto). Escrita bloqueada para proteger dados; faça backup e migração antes de continuar.');
+      throw new Error('Formato inesperado dos agendamentos. A gravação foi bloqueada para proteger os dados. Faça uma cópia de segurança antes de continuar.');
     const list=normalizeBookings(raw);
     if(list.some(b=>!b||!Number.isSafeInteger(Number(b.id))||!b.date||!b.time))
       throw new Error('Existem reservas incompletas no banco. Escrita bloqueada para proteger os dados.');
@@ -392,9 +392,9 @@ let lastBookingReadAt='';
 async function readBookingsOnly(){
   try{
     const r=await fetch(DB+'/bookings.json',{cache:'no-store'});
-    if(!r.ok)return {ok:false,error:'HTTP '+r.status+' — verifique as regras de leitura de /bookings'};
+    if(!r.ok)return {ok:false,error:'HTTP '+r.status+' — verifique as permissões de acesso à agenda'};
     return {ok:true,data:await r.json()};
-  }catch(e){return {ok:false,error:'Falha de conexão ao consultar /bookings'};}
+  }catch(e){return {ok:false,error:'Falha de conexão ao consultar a agenda'};}
 }
 function applyBookingRead(result){
   lastBookingReadAt=new Date().toLocaleTimeString('pt-BR');
@@ -460,7 +460,7 @@ async function buscarReservasParaBackup(){
   const r=await readBookingsOnly();
   if(!r.ok)throw new Error('Falha na leitura do Firebase: '+r.error);
   const lista=normalizeBookings(r.data);
-  if(!lista.length)throw new Error('Firebase /bookings está vazio. Nenhuma cópia vazia foi feita; os backups antigos foram preservados.');
+  if(!lista.length)throw new Error('A agenda está vazia. Nenhuma cópia vazia foi feita; as cópias anteriores foram preservadas.');
   return lista;
 }
 function baixarArquivoBackup(pacote){
@@ -772,10 +772,10 @@ function renderTabAg(){
   const readingError=bookingReadState==='error';
   const diag='<div class="notice '+(readingError?'err':'info')+'" style="margin-bottom:14px">'
     +(readingError?'⚠️ <b>Falha ao ler agendamentos.</b> '+esc(bookingReadError)+'; a lista abaixo pode estar desatualizada.'
-      :bookingReadState==='loading'?'⏳ Consultando agendamentos do Firebase…'
-      :'<b>Firebase /bookings:</b> '+bookings.length+' registro(s) preservado(s) · '+fut.length+' ativo(s) de hoje ou futuros · '+old+' antigo(s) · '+cancelados.length+' cancelado(s).')
+      :bookingReadState==='loading'?'⏳ Consultando a Agenda de Clientes…'
+      :'<b>Agenda de Clientes:</b> '+bookings.length+' agendamento(s) salvo(s) · '+fut.length+' para hoje ou datas futuras · '+old+' antigo(s) · '+cancelados.length+' cancelado(s).')
     +(lastBookingReadAt?' <small style="opacity:.8">Última consulta: '+esc(lastBookingReadAt)+'</small>':'')
-    +' <button class="btn btn-outline" style="padding:5px 12px;font-size:12px;margin-left:6px" onclick="refreshBookings().catch(()=>{})">Atualizar consulta</button></div>';
+    +' <button class="btn btn-outline" style="padding:5px 12px;font-size:12px;margin-left:6px" onclick="refreshBookings().catch(()=>{})">Atualizar agenda</button></div>';
   let top='';
   if(old>0){
     top='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
@@ -785,11 +785,11 @@ function renderTabAg(){
   }
   if(!fut.length){
     const msg=readingError
-      ?'<div class="notice err"><b>Não é possível afirmar que a agenda está vazia.</b> A consulta ao Firebase falhou. Confira Realtime Database → Dados → bookings, e evite novos agendamentos até corrigir a conexão/permissões.</div>'
+      ?'<div class="notice err"><b>Não é possível afirmar que a agenda está vazia.</b> A consulta à agenda falhou. Confira os dados no painel do banco de dados e evite novos agendamentos até corrigir a conexão ou as permissões.</div>'
       :bookingReadState==='loading'
-      ?'<div class="notice info">Buscando os registros salvos no Firebase…</div>'
+      ?'<div class="notice info">Buscando os agendamentos salvos…</div>'
       :bookings.length===0
-      ?'<div class="notice info">A leitura de /bookings funcionou, mas este caminho retornou 0 registros. Confira a pasta bookings e os backups no Firebase antes de alterar qualquer dado.</div>'
+      ?'<div class="notice info">A consulta à agenda funcionou, mas nenhum agendamento foi encontrado. Confira os dados e as cópias de segurança antes de alterar qualquer informação.</div>'
       :'<div class="notice info">Não há agendamentos para hoje ou datas futuras. Existem registros antigos; use “antigos ocultos” para consultá-los.</div>';
     box.innerHTML=diag+top+msg+cancelHtml;
     if(oldOpen&&old>0)fillOld();
