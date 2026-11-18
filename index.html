@@ -268,12 +268,23 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
         <div class="tab" data-tab="sv" onclick="showTab('sv',this)">Serviços e Preços</div>
         <div class="tab" data-tab="hr" onclick="showTab('hr',this)">Horários de Funcionamento</div>
         <div class="tab" data-tab="cfg" onclick="showTab('cfg',this)">Configurações</div>
+        <div class="tab" data-tab="bkup" onclick="showTab('bkup',this);renderBackupPanel()">Backup local</div>
         <div class="tab" onclick="adminLogout()">⏻ Sair</div>
       </div>
       <div id="tab-ag"></div>
       <div id="tab-sv" class="hidden"></div>
       <div id="tab-hr" class="hidden"></div>
       <div id="tab-cfg" class="hidden"></div>
+      <div id="tab-bkup" class="hidden">
+        <h3 style="color:var(--gold);margin-bottom:10px">Backup e recuperação de agendamentos</h3>
+        <p style="color:var(--muted);margin-bottom:16px">Sem Google Drive. As cópias são guardadas somente neste navegador, quando você abre o painel, e podem ser baixadas em JSON para guardar em um local privado.</p>
+        <button class="btn btn-gold" type="button" onclick="downloadBackupAgora()">⬇ Baixar backup agora (JSON)</button>
+        <button class="btn btn-outline" type="button" style="margin-top:8px" onclick="renderBackupPanel()">↻ Atualizar cópias</button>
+        <p style="color:var(--muted);font-size:13px;margin:14px 0 6px">O backup automático local é tentado uma vez por dia <b>somente com o painel aberto e dados válidos carregados</b>. Não funciona com o site fechado e não substitui cópias guardadas fora do aparelho.</p>
+        <div id="backupMsg" role="status" aria-live="polite" style="font-size:13px;color:var(--gold-light);margin:12px 0"></div>
+        <div id="backupList" style="margin-top:14px"></div>
+        <div class="notice info" style="margin-top:14px">Se o banco estiver vazio ou a conexão falhar, nenhuma cópia vazia será criada. Não há restauração automática: baixe a cópia que deseja recuperar e confira os dados antes de restaurar no Firebase.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -382,6 +393,133 @@ function applyBookingRead(result){
   return true;
 }
 
+
+/* ============ BACKUP LOCAL (SEM DRIVE/APPS SCRIPT) ============ */
+/* Somente leitura do Firebase. As cópias ficam no IndexedDB DESTE aparelho.
+   Se a página estiver fechada, NÃO existe tarefa em segundo plano. */
+const LOCAL_BACKUP_DB='alfa-barbearia-agenda-local-v1';
+let backupAutomaticoOcupado=false;
+let ultimoAvisoBackup='';
+function avisoBackup(msg){
+  ultimoAvisoBackup=msg;
+  const el=document.getElementById('backupMsg');
+  if(el)el.textContent=msg;
+}
+function abrirBancoBackups(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){reject(new Error('IndexedDB indisponível'));return;}
+    let r;
+    try{r=indexedDB.open(LOCAL_BACKUP_DB,1);}catch(e){reject(e);return;}
+    r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('copias'))r.result.createObjectStore('copias',{keyPath:'id'});};
+    r.onsuccess=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error||new Error('Erro ao abrir backups'));
+  });
+}
+async function executarNoBackup(modo,op){
+  const db=await abrirBancoBackups();
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction('copias',modo);
+      const store=tx.objectStore('copias');
+      let pedido,resultado;
+      try{pedido=op(store);}catch(e){reject(e);return;}
+      pedido.onsuccess=()=>{resultado=pedido.result;};
+      pedido.onerror=()=>reject(pedido.error||new Error('Falha na cópia local'));
+      tx.oncomplete=()=>resolve(resultado); /* só confirma após o armazenamento finalizar */
+      tx.onabort=()=>reject(tx.error||new Error('Backup local não foi salvo'));
+      tx.onerror=()=>reject(tx.error||new Error('Falha na transação'));
+    });
+  }finally{db.close();}
+}
+async function listarBackupsLocais(){
+  return (await executarNoBackup('readonly',s=>s.getAll())).sort((a,b)=>b.exportedAt.localeCompare(a.exportedAt));
+}
+function criarPacoteBackup(lista){
+  return {formato:'alfa-barbearia-bookings-backup',versao:1,
+    exportedAt:new Date().toISOString(),quantidade:lista.length,
+    origem:'Realtime Database /bookings',bookings:lista};
+}
+async function buscarReservasParaBackup(){
+  const r=await readBookingsOnly();
+  if(!r.ok)throw new Error('Falha na leitura do Firebase: '+r.error);
+  const lista=normalizeBookings(r.data);
+  if(!lista.length)throw new Error('Firebase /bookings está vazio. Nenhuma cópia vazia foi feita; os backups antigos foram preservados.');
+  return lista;
+}
+function baixarArquivoBackup(pacote){
+  const nome='alfa-agendamentos-'+pacote.exportedAt.replace(/[:.]/g,'-')+'.json';
+  const url=URL.createObjectURL(new Blob([JSON.stringify(pacote,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');
+  a.href=url;a.download=nome;a.style.display='none';document.body.appendChild(a);
+  a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+async function downloadBackupAgora(){
+  if(!admOk)return;
+  avisoBackup('Consultando o Firebase para gerar o arquivo…');
+  try{
+    const lista=await buscarReservasParaBackup();
+    const p=criarPacoteBackup(lista);
+    baixarArquivoBackup(p);
+    try{await executarNoBackup('readwrite',s=>s.add({...p,id:'manual:'+p.exportedAt}));}
+    catch(e){avisoBackup('Download solicitado com '+p.quantidade+' registros. Não foi possível guardar uma cópia no navegador: '+e.message);renderBackupPanel();return;}
+    avisoBackup('Download solicitado com '+p.quantidade+' agendamentos. Guarde o JSON em uma pasta privada fora deste dispositivo.');
+    renderBackupPanel();
+  }catch(e){avisoBackup('Não foi possível gerar backup: '+e.message);}
+}
+async function tentarBackupAutomaticoLocal(){
+  if(!admOk||backupAutomaticoOcupado)return;
+  backupAutomaticoOcupado=true;
+  try{
+    const id='auto:'+todayISO();
+    const existente=await executarNoBackup('readonly',s=>s.get(id));
+    if(existente)return;
+    const lista=await buscarReservasParaBackup();
+    const pacote=criarPacoteBackup(lista);
+    await executarNoBackup('readwrite',s=>s.add({...pacote,id}));
+    avisoBackup('Cópia local diária criada: '+lista.length+' agendamentos. Baixe-a para manter uma cópia fora do navegador.');
+    renderBackupPanel();
+  }catch(e){
+    // Falha/vazio NUNCA sobrescreve cópias anteriores.
+    avisoBackup('Backup automático local não realizado: '+e.message);
+  }finally{backupAutomaticoOcupado=false;}
+}
+async function baixarBackupLocal(id){
+  if(!admOk)return;
+  try{
+    const b=await executarNoBackup('readonly',s=>s.get(id));
+    if(!b)throw new Error('Cópia não encontrada neste navegador');
+    baixarArquivoBackup(b);
+    avisoBackup('Download solicitado: '+b.quantidade+' agendamentos. Guarde o arquivo em local privado.');
+  }catch(e){avisoBackup('Falha ao baixar: '+e.message);}
+}
+async function renderBackupPanel(){
+  if(!admOk)return;
+  const box=document.getElementById('backupList');
+  if(!box)return;
+  const msg=document.getElementById('backupMsg');if(msg)msg.textContent=ultimoAvisoBackup;
+  try{
+    const copias=await listarBackupsLocais();
+    box.replaceChildren();
+    if(!copias.length){box.textContent='Nenhuma cópia local encontrada neste navegador.';return;}
+    const titulo=document.createElement('p');
+    titulo.textContent=copias.length+' cópia(s) salva(s) neste aparelho:';
+    titulo.style.marginBottom='10px';box.appendChild(titulo);
+    for(const c of copias){
+      const linha=document.createElement('div');
+      linha.style.cssText='display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)';
+      const label=document.createElement('span');
+      label.textContent=(c.id.startsWith('auto:')?'Automática':'Manual')+' · '+new Date(c.exportedAt).toLocaleString('pt-BR')+' · '+c.quantidade+' agendamentos';
+      label.style.fontSize='13px';
+      const btn=document.createElement('button');btn.className='btn btn-outline';
+      btn.style.cssText='font-size:13px;padding:8px 12px';btn.textContent='Baixar JSON';
+      btn.onclick=()=>baixarBackupLocal(c.id);
+      linha.append(label,btn);box.appendChild(linha);
+    }
+  }catch(e){box.textContent='Armazenamento local indisponível neste navegador: '+e.message;}
+}
+/* Tenta uma cópia na abertura do painel e a cada 5 minutos enquanto aberto. */
+setInterval(()=>{if(admOk)tentarBackupAutomaticoLocal();},300000);
 
 /* ============ HELPERS ============ */
 const toMin=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
@@ -593,14 +731,14 @@ let admOk=false;
 function adminLogin(){
   const p=document.getElementById('admPass').value;
   if(p===cfg.password){admOk=true;document.getElementById('adminLogin').classList.add('hidden');
-    document.getElementById('adminPanel').classList.remove('hidden');renderAdmin();}
+    document.getElementById('adminPanel').classList.remove('hidden');renderAdmin();renderBackupPanel();tentarBackupAutomaticoLocal();}
   else document.getElementById('admErr').innerHTML='<div class="notice err" style="margin-top:14px">Senha incorreta.</div>';
 }
 function adminLogout(){admOk=false;document.getElementById('adminPanel').classList.add('hidden');
   document.getElementById('adminLogin').classList.remove('hidden');document.getElementById('admPass').value='';}
 function showTab(t,el){document.querySelectorAll('.tab[data-tab]').forEach(x=>x.classList.remove('active'));
   if(el)el.classList.add('active');
-  ['ag','sv','hr','cfg'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('hidden',x!==t));}
+  ['ag','sv','hr','cfg','bkup'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('hidden',x!==t));}
 
 function renderAdmin(){renderTabAg();renderTabSv();renderTabHr();renderTabCfg();}
 
@@ -948,7 +1086,7 @@ async function refreshBookings(){
     lastWeekTotal=(freshLastWeek&&typeof freshLastWeek.total==='number')?freshLastWeek.total:null;
     checkNewBk();
     renderSlots();
-    if(admOk)renderAdmin();
+    if(admOk){renderAdmin();tentarBackupAutomaticoLocal();}
   }finally{refreshingBookings=false;}
 }
 
