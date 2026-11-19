@@ -818,6 +818,8 @@ function shopNow(){
   return {date:p.year+'-'+p.month+'-'+p.day, minute:Number(p.hour)*60+Number(p.minute)};
 }
 const todayISO=()=>shopNow().date;
+const bookingAdvanceDays=15;
+const bookingLastDate=(date=todayISO())=>officeDatePlus(date,bookingAdvanceDays);
 function officeDatePlus(date,days){
   const day=new Date(date+'T12:00:00Z');
   day.setUTCDate(day.getUTCDate()+days);
@@ -862,7 +864,7 @@ function renderPublic(){
     `<option value="${Number(s.id)}">${esc(s.name)} — R$ ${Number(s.price).toFixed(2).replace('.',',')} (${esc(s.dur)}min)</option>`).join('');
   if([...document.getElementById('bkService').options].some(o=>o.value===previousService))document.getElementById('bkService').value=previousService;
   const d=document.getElementById('bkDate');d.min=todayISO();
-  d.max=officeDatePlus(d.min,7);
+  d.max=bookingLastDate(d.min);
   const wa=waLink('Olá! Vim pelo site da Alfa Barbearia e gostaria de mais informações.');
   document.getElementById('floatWa').href=wa;
   document.getElementById('footWa').href=wa;
@@ -996,7 +998,7 @@ async function updateScheduleConfig(change){return updateConfigETag(change,true)
    reservas ativas e horários já passados de hoje. */
 function getBookingDayGrid(date,s){
   const field=document.getElementById('bkDate');
-  if(!date||date<todayISO()||date>officeDatePlus(todayISO(),7)||date<field.min||date>field.max)return {grid:[],dayBk:[],reason:'outside'};
+  if(!date||date<todayISO()||date>bookingLastDate()||date<field.min||date>field.max)return {grid:[],dayBk:[],reason:'outside'};
   if(!publicReady||bookingReadState==='loading'||bookingReadState==='error')return {grid:[],dayBk:[],reason:'pending'};
   const dia=new Date(date+'T12:00:00');
   if(Number.isNaN(dia.getTime())||bookingDayKey(dia.getFullYear(),dia.getMonth(),dia.getDate())!==date)return {grid:[],dayBk:[],reason:'outside'};
@@ -1188,7 +1190,7 @@ async function submitBooking(){
   if(!date)return fail('Selecione a data do atendimento.');
   if(date<todayISO())return fail('Não é possível agendar em datas passadas.');
   const dateField=document.getElementById('bkDate');
-  if(date>officeDatePlus(todayISO(),7)||date>dateField.max)return fail('Agendamentos disponíveis somente para os próximos 7 dias.');
+  if(date>bookingLastDate()||date>dateField.max)return fail('Agendamentos disponíveis somente para os próximos '+bookingAdvanceDays+' dias.');
   if(getScheduleForDate(date).closed)return fail('Não atendemos nesta data. Escolha outra data disponível.');
   if(!selectedTime)return fail('Escolha um horário disponível.');
   if(!name||name.length>60)return fail('Informe seu nome com até 60 caracteres.');
@@ -1217,7 +1219,7 @@ async function submitBooking(){
       const alreadySaved=list.find(b=>b.id===bk.id);
       if(alreadySaved)throw new Error('A reserva já consta na agenda. Confirme o horário com a barbearia.');
       const latestCfg=await readCurrentOffer(s);
-      if(!bookingInFuture(date,selectedTime)||date>officeDatePlus(todayISO(),7)||!scheduleAllowsBooking(bk,latestCfg))
+      if(!bookingInFuture(date,selectedTime)||date>bookingLastDate()||!scheduleAllowsBooking(bk,latestCfg))
         throw new Error('Esta data ou horário ficou indisponível. Selecione outra vaga.');
       if(list.some(b=>bookingAtivo(b)&&b.date===date&&overlaps(st,st+bk.dur,toMin(b.time),toMin(b.time)+Number(b.dur)))){
         throw new Error('Este horário acabou de ser ocupado. Escolha outro.');
@@ -1629,7 +1631,7 @@ function renderTabHr(){
     +'<br><button class="btn btn-gold" onclick="saveHours()">SALVAR HORÁRIOS SEMANAIS</button><div id="hrMsg"></div>'
     +'<div class="special-day-admin">'
     +'<h3>Abrir ou fechar datas específicas</h3>'
-    +'<p>Use esta opção para feriados, folgas e horários especiais, sem alterar os demais dias da semana. Datas fechadas ficam bloqueadas no calendário dos clientes. Clientes podem marcar somente nos próximos 7 dias.</p>'
+    +'<p>Use esta opção para feriados, folgas e horários especiais, sem alterar os demais dias da semana. Datas fechadas ficam bloqueadas no calendário dos clientes. Clientes podem marcar somente nos próximos '+bookingAdvanceDays+' dias.</p>'
     +'<label for="spDate">Data que deseja alterar</label><input type="date" id="spDate" min="'+todayISO()+'" onchange="specialDayDateChanged()">'
     +'<label for="spAction">O que deseja fazer?</label><select id="spAction" onchange="specialDayActionChanged()">'
     +'<option value="closed">Fechar esta data (sem atendimento)</option>'
