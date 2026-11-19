@@ -63,7 +63,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--gold);margin:18px
 input,select{width:100%;padding:13px 14px;background:#0d0d0d;border:1px solid var(--line);border-radius:6px;color:var(--text);font-size:15px;font-family:inherit}
 input:focus,select:focus{outline:none;border-color:var(--gold)}
 .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;margin-top:8px}
-.slot{padding:11px 6px;text-align:center;border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:14px;background:#0d0d0d;transition:.15s}
+.slot{padding:11px 6px;text-align:center;border:1px solid var(--line);border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit;color:var(--text);background:#0d0d0d;transition:.15s}
 .slot:hover{border-color:var(--gold)}
 .slot.sel{background:var(--gold);color:#111;font-weight:700;border-color:var(--gold)}
 .slot.rec.sel{color:#111;border:1px solid var(--gold)} /* estrela selecionada: texto escuro visível no dourado */
@@ -72,6 +72,49 @@ input:focus,select:focus{outline:none;border-color:var(--gold)}
 .slot-empty{color:var(--muted);font-size:14px;padding:8px 0}
 .slot.rec{border:1px dashed rgba(212,175,55,.5);color:var(--gold)} /* ⭐ apenas indica recomendado — NÃO parece selecionado */
 .slot-rec-hint{color:var(--gold-light);font-size:13px;margin-top:12px;font-weight:600;grid-column:1 / -1}
+/* CALENDÁRIO DE AGENDAMENTO: dias marcados por disponibilidade do serviço */
+.bk-date-picker{position:relative}
+.bk-date-trigger{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;gap:12px;background:#0d0d0d;border:1px solid var(--line);border-radius:7px;padding:14px 15px;color:var(--text);font:inherit;cursor:pointer;min-height:51px}
+.bk-date-trigger:hover,.bk-date-trigger:focus-visible{border-color:var(--gold);outline:none}
+.bk-date-trigger .bk-date-arrow{color:var(--gold);font-size:19px;line-height:1}
+.bk-date-calendar{background:#121212;border:1px solid #4b4129;box-shadow:0 18px 32px rgba(0,0,0,.32);border-radius:12px;padding:16px;margin-top:10px}
+.bk-date-calendar[hidden]{display:none}
+.bk-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.bk-month-label{font-size:16px;font-weight:700;color:var(--gold-light);text-transform:capitalize;text-align:center}
+.bk-month-nav{width:37px;height:37px;flex:0 0 37px;color:var(--gold);border:1px solid #555;background:#191919;border-radius:7px;font:inherit;font-size:23px;cursor:pointer}
+.bk-month-nav:disabled{opacity:.22;cursor:not-allowed}
+.bk-weekdays,.bk-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.bk-weekdays{margin-bottom:5px}
+.bk-weekdays span{font-size:12px;text-align:center;color:#aaa;padding:7px 0;font-weight:700}
+.bk-day{border:1px solid transparent;min-width:0;min-height:43px;background:#202020;color:#eee;font:inherit;font-size:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:4px 0;position:relative;cursor:pointer}
+.bk-day.available{border-color:rgba(212,175,55,.5);color:#f2deb1}
+.bk-day.available:hover,.bk-day.available:focus-visible{background:#3b321d;outline:2px solid var(--gold);outline-offset:0}
+.bk-day.selected{background:var(--gold);color:#151515;border-color:var(--gold);font-weight:800}
+.bk-day.unavailable{opacity:.58;color:#aaa;text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#cc8585;cursor:not-allowed}
+.bk-day.closed{opacity:.4;text-decoration:line-through;cursor:not-allowed}
+.bk-day.outside{opacity:.24;cursor:not-allowed}
+.bk-day.pending{opacity:.45;cursor:not-allowed}
+.bk-day:disabled{pointer-events:none}
+.bk-day-spacer{min-width:0;min-height:43px}
+.bk-calendar-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;color:#b9b9b9;font-size:12px;line-height:1.5}
+.bk-calendar-legend span{display:inline-flex;align-items:center;gap:5px}
+.bk-calendar-dot{display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid var(--gold)}
+.bk-calendar-cross{font-weight:800;color:#d58f8f;text-decoration:line-through}
+.bk-calendar-hint{color:#b9b9b9;font-size:12px;line-height:1.5;margin-top:8px}
+@media(max-width:400px){.bk-date-calendar{padding:12px}.bk-weekdays,.bk-calendar-grid{gap:3px}.bk-day,.bk-day-spacer{min-height:39px}}
+/* Horários especiais por data: não alteram a rotina semanal e não removem reservas. */
+.special-day-admin{margin-top:26px;padding:22px;background:#171717;border:1px solid #53472a;border-radius:12px}
+.special-day-admin h3{color:var(--gold-light);font-size:23px;margin-bottom:6px}
+.special-day-admin p{color:#b9b9b9;font-size:13px;margin-bottom:12px}
+.special-day-fields{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.special-day-fields>div{flex:1 1 160px;min-width:125px}
+.special-day-fields label{margin-top:9px}
+.special-day-buttons{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+.special-day-buttons button{min-width:180px}
+.special-day-table{width:100%;font-size:13px;overflow-wrap:anywhere}
+.special-day-table td,.special-day-table th{padding:9px 5px}
+.special-day-status{margin-top:12px;font-size:13px;color:#d2d2d2}
+@media(max-width:520px){.special-day-admin{padding:15px}.special-day-fields>div{flex-basis:100%}}
 /* AVALIAÇÕES NO GOOGLE — sem cadastro ou envio de avaliações no site */
 .google-review-card{max-width:610px;margin:0 auto;text-align:center;background:linear-gradient(170deg,#1b1b1b,#101010);border:1px solid var(--line);border-radius:14px;padding:clamp(24px,5vw,42px)}
 .google-review-stars{font-size:30px;color:var(--gold);letter-spacing:5px;margin-bottom:14px;line-height:1.25}
@@ -93,6 +136,23 @@ footer{border-top:1px solid var(--line);padding:40px 0;text-align:center;color:v
 .socials a{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);transition:.2s}
 .socials a:hover{border-color:var(--gold);background:rgba(212,175,55,.08)}
 .socials svg{width:19px;height:19px;fill:currentColor}
+
+/* Painel do barbeiro: resumo de clientes ativos por data */
+.day-count-panel{background:linear-gradient(170deg,#1c1b18,#121212);border:1px solid #454033;border-radius:12px;padding:17px 18px;margin-bottom:17px}
+.day-count-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}
+.day-count-top>strong{font-size:17px;color:var(--gold-light);font-family:'Montserrat','Inter',sans-serif}
+.day-count-top .btn{font-size:12px;padding:7px 13px}
+.day-count-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:9px}
+.day-count-item{display:flex;flex-direction:column;gap:3px;background:#101010;border:1px solid #333;border-radius:9px;padding:10px 12px}
+.day-count-item span{font-size:13px;color:#bbb}
+.day-count-item strong{font-size:15px;color:var(--gold-light)}
+.day-count-panel small{display:block;margin-top:11px;color:#999;font-size:11px;line-height:1.5}
+.day-count-empty{font-size:13px;color:#bbb;margin:3px 0 8px}
+.day-client-heading{color:var(--gold);margin:22px 0 8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.day-client-heading-past{color:var(--muted);margin-top:18px}
+.day-client-badge{font:600 12px 'Montserrat','Inter',sans-serif;border:1px solid rgba(212,175,55,.45);border-radius:50px;padding:5px 10px;color:var(--gold-light);white-space:nowrap}
+@media(max-width:420px){.day-count-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.day-count-panel{padding:14px}.day-count-item{padding:9px}.day-count-item strong{font-size:13px}.day-count-item span{font-size:12px}}
+
 /* ADMIN */
 .admin-login{max-width:400px;margin:0 auto;background:var(--dark2);border:1px solid var(--line);border-radius:14px;padding:36px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
@@ -203,8 +263,24 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
     <div class="booking-wrap" id="bookingForm">
       <label>Serviço</label>
       <select id="bkService"></select>
-      <label>Data</label>
-      <input type="date" id="bkDate" onchange="renderSlots()">
+      <label id="bkDateLabel">Data</label>
+      <div class="bk-date-picker">
+        <input type="hidden" id="bkDate">
+        <button id="bkDateTrigger" class="bk-date-trigger" type="button" aria-controls="bookingCalendar" aria-expanded="false" aria-labelledby="bkDateLabel bkDateText" onclick="toggleBookingCalendar()">
+          <span id="bkDateText">Selecionar uma data</span><span class="bk-date-arrow" aria-hidden="true">▾</span>
+        </button>
+        <div id="bookingCalendar" class="bk-date-calendar" hidden>
+          <div class="bk-calendar-header">
+            <button id="bkPrevMonth" class="bk-month-nav" type="button" aria-label="Mês anterior" onclick="changeBookingMonth(-1)">‹</button>
+            <span id="bkMonthLabel" class="bk-month-label"></span>
+            <button id="bkNextMonth" class="bk-month-nav" type="button" aria-label="Próximo mês" onclick="changeBookingMonth(1)">›</button>
+          </div>
+          <div class="bk-weekdays" aria-hidden="true"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+          <div id="bkCalendarDays" class="bk-calendar-grid" role="group" aria-label="Datas disponíveis para agendamento"></div>
+          <div class="bk-calendar-legend"><span><i class="bk-calendar-dot"></i> Disponível</span><span><i class="bk-calendar-cross">18</i> Sem vagas</span><span>◌ Não liberado ou fechado</span></div>
+          <p id="bkCalendarStatus" class="bk-calendar-hint" aria-live="polite">Os dias riscados não têm horário para o serviço escolhido.</p>
+        </div>
+      </div>
       <label>Horário disponível</label>
       <div class="slots" id="slots"><p class="slot-empty">Selecione uma data para ver os horários.</p></div>
       <label>Seu nome</label>
@@ -317,25 +393,28 @@ window.addEventListener('error',function(e){
 </script><script>
 /* ============ FIREBASE (banco de dados compartilhado) ============ */
 const DB='https://alfabarbearia-default-rtdb.firebaseio.com';
+let agendaRevision=0, configRevision=0, servicesRevision=0;
+const writes={bookings:Promise.resolve(),services:Promise.resolve(),cfg:Promise.resolve()};
+function enqueueWrite(path,operation){
+  const result=writes[path].then(operation);
+  writes[path]=result.catch(()=>{});
+  return result;
+}
+const requestTimeout=15000;
+function dbFetch(path,options={}){
+  const signal=typeof AbortSignal.timeout==='function'?AbortSignal.timeout(requestTimeout):undefined;
+  return fetch(DB+path+'.json',{...options,cache:'no-store',signal});
+}
 async function dbGet(path){
   /* erro de rede => undefined | banco vazio => null (nunca confundir os dois) */
   try{
-    const r=await fetch(DB+path+'.json',{cache:'no-store'});
+    const r=await dbFetch(path);
     if(!r.ok)return undefined;
     return await r.json();
   }catch(e){return undefined;}
 }
-/* agendamentos frescos do banco; se a rede falhar LANÇA erro (nunca devolve [] falso) */
-async function getBk(){
-  const l=await dbGet('/bookings');
-  if(l===undefined)throw new Error('offline');
-  return Array.isArray(l)?l.filter(Boolean):(l?Object.values(l).filter(Boolean):[]);
-}
-async function dbPut(path,val){
-  const r=await fetch(DB+path+'.json',{method:'PUT',body:JSON.stringify(val)});
-  if(!r.ok)throw new Error('Falha ao salvar');
-  return r.json();
-}
+/* Gravações incondicionais foram removidas: reservas, serviços e
+   configurações são alterados somente com ETag / If-Match. */
 
 /* Transação otimista do Firebase Realtime Database via ETag.
    O PUT só é aceito se NINGUÉM tiver alterado a lista desde o GET.
@@ -350,7 +429,7 @@ function normalizeBookings(raw){
    Uma reserva incompleta NÃO deve ser sobrescrita ou tratada como horário livre. */
 function bookingValido(b){
   if(!b||typeof b!=='object'||Array.isArray(b)||
-     !Number.isSafeInteger(Number(b.id))||
+     (b.id===null||b.id===undefined||typeof b.id!=='number'||!Number.isSafeInteger(b.id)||b.id<=0)||
      typeof b.date!=='string'||!/^(\d{4})-(\d{2})-(\d{2})$/.test(b.date)||
      typeof b.time!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(b.time)||
      !Number.isFinite(Number(b.dur))||Number(b.dur)<=0)return false;
@@ -360,55 +439,115 @@ function bookingValido(b){
     d.getMonth()+1===Number(b.date.slice(5,7)) &&
     d.getDate()===Number(b.date.slice(8,10));
 }
-async function mutateBookings(change,maxAttempts=6){
+function mutateBookings(change,maxAttempts=6){
+  return enqueueWrite('bookings',()=>mutateBookingsNow(change,maxAttempts));
+}
+async function mutateBookingsNow(change,maxAttempts){
   for(let attempt=0;attempt<maxAttempts;attempt++){
-    const r=await fetch(DB+'/bookings.json',{headers:{'X-Firebase-ETag':'true'},cache:'no-store'});
+    const r=await dbFetch('/bookings',{headers:{'X-Firebase-ETag':'true'},cache:'no-store'});
     if(!r.ok)throw new Error('Não foi possível consultar os agendamentos ('+r.status+').');
     const tag=r.headers.get('ETag');
     if(!tag)throw new Error('O servidor não forneceu ETag; gravação cancelada para proteger reservas.');
     const raw=await r.json();
     /* Se o Firebase retornar um OBJETO com chaves, não o reescrever como array.
        Esse formato precisa ser migrado conscientemente, com backup prévio. */
-    if(raw!==null&&!Array.isArray(raw))
-      throw new Error('Formato inesperado dos agendamentos. A gravação foi bloqueada para proteger os dados. Faça uma cópia de segurança antes de continuar.');
+    if(!leituraAgendaValida(raw))
+      throw new Error('A agenda contém formato, IDs ou posições inesperadas. Gravação bloqueada para proteger os dados. Faça uma exportação pelo Console antes de qualquer correção.');
     const list=normalizeBookings(raw);
-    if(list.some(b=>!bookingValido(b)))
-      throw new Error('Há agendamentos com data, horário ou duração inválidos. Gravação interrompida para preservar os dados.');
     /* Fotografa os IDs ANTES de executar a alteração. Uma função futura que
        modificasse o array recebido não poderá esconder a exclusão. */
     const idsAntes=list.map(b=>String(b.id));
-    if(new Set(idsAntes).size!==idsAntes.length)
-      throw new Error('IDs duplicados na agenda original. Gravação bloqueada.');
-    const next=change(list.map(b=>({...b})));
+    const next=await change(list.map(b=>({...b})));
     if(!Array.isArray(next))throw new Error('Atualização de agendamento inválida.');
     if(next.some(b=>!bookingValido(b)))
       throw new Error('Atualização criou registros inválidos. Nenhum dado foi gravado.');
     /* Nunca envia um PUT que elimine IDs anteriores, mesmo por engano. */
     const novosIds=new Set(next.map(b=>String(b.id)));
-    if(novosIds.size!==next.length || idsAntes.some(id=>!novosIds.has(id)))
+    if(novosIds.size!==next.length || idsAntes.some((id,i)=>String(next[i]?.id)!==id))
       throw new Error('Operação bloqueada: excluir ou substituir registros existentes não é permitido. Use cancelamento com histórico.');
-    const w=await fetch(DB+'/bookings.json',{
-      method:'PUT',headers:{'If-Match':tag,'Content-Type':'application/json'},
-      body:JSON.stringify(next)
-    });
+    let w;
+    try{
+      w=await dbFetch('/bookings',{
+        method:'PUT',headers:{'If-Match':tag,'Content-Type':'application/json'},
+        body:JSON.stringify(next)
+      });
+    }catch(e){
+      const pending=new Error('A conexão caiu antes da confirmação da gravação.');
+      pending.commitUnknown=true;
+      throw pending;
+    }
     if(w.status===412)continue;
-    if(!w.ok)throw new Error('Não foi possível salvar os agendamentos ('+w.status+').');
+    if(!w.ok){
+      const error=new Error('Não foi possível salvar os agendamentos ('+w.status+').');
+      error.commitUnknown=w.status>=500;
+      throw error;
+    }
+    agendaRevision++;
     bookings=next;
     bookingReadState='ok';bookingReadError='';lastBookingReadAt=new Date().toLocaleTimeString('pt-BR');
     return next;
   }
   throw new Error('Muitas alterações simultâneas. Tente novamente.');
 }
-async function getSv(){
-  const l=await dbGet('/services');
-  if(l===undefined)throw new Error('offline');
-  return Array.isArray(l)?l.filter(Boolean):(l?Object.values(l).filter(Boolean):[]);
+/* Serviços também usam ETag. Uma outra aba nunca pode ser sobrescrita
+   por uma versão antiga e um conflito na MESMA ficha exige revisão manual. */
+function validarServico(s){
+  return s&&typeof s==='object'&&!Array.isArray(s)&&
+    Number.isSafeInteger(s.id)&&s.id>0&&
+    typeof s.name==='string'&&s.name.trim().length>=1&&s.name.length<=100&&
+    typeof s.price==='number'&&Number.isFinite(s.price)&&s.price>0&&s.price<=100000&&
+    Number.isInteger(s.dur)&&s.dur>=5&&s.dur<=720;
 }
-function netErr(){alert('Sem conexão com a internet agora. Tente novamente em instantes.');}
+function mutateServices(change,maxAttempts=6){
+  return enqueueWrite('services',()=>mutateServicesNow(change,maxAttempts));
+}
+async function mutateServicesNow(change,maxAttempts){
+  for(let attempt=0;attempt<maxAttempts;attempt++){
+    const response=await dbFetch('/services',{headers:{'X-Firebase-ETag':'true'},cache:'no-store'});
+    if(!response.ok)throw new Error('Falha ao consultar serviços (HTTP '+response.status+').');
+    const etag=response.headers.get('ETag');
+    if(!etag)throw new Error('ETag dos serviços não fornecida. Nada foi gravado.');
+    const raw=await response.json();
+    if(!Array.isArray(raw)||!raw.every(validarServico))throw new Error('Serviços em formato inesperado. Nenhum dado foi alterado.');
+    const prev=raw;
+    if(new Set(prev.map(x=>String(x.id))).size!==prev.length)
+      throw new Error('Existem IDs repetidos nos serviços. Atualização bloqueada.');
+    const next=await change(prev.map(x=>({...x})));
+    if(!Array.isArray(next)||!next.length||!next.every(validarServico))
+      throw new Error('A alteração criaria uma lista de serviços vazia ou inválida.');
+    if(new Set(next.map(x=>String(x.id))).size!==next.length)
+      throw new Error('A alteração criaria IDs de serviços repetidos.');
+    const w=await dbFetch('/services',{
+      method:'PUT',headers:{'If-Match':etag,'Content-Type':'application/json'},
+      body:JSON.stringify(next)
+    });
+    if(w.status===412)continue;
+    if(!w.ok)throw new Error('Falha ao gravar serviços (HTTP '+w.status+').');
+    servicesRevision++;
+    services=next;
+    return next;
+  }
+  throw new Error('Serviços modificados simultaneamente. Atualize o painel e tente novamente.');
+}
 
 const DAYS=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-let cfg={whatsapp:'',instagram:'',password:'',start:'09:00',end:'19:00',slotMin:30,
+const cfgDefaults={whatsapp:'',instagram:'',password:'',start:'09:00',end:'19:00',slotMin:30,
   days:[false,true,true,true,true,true,true]};
+let cfg={...cfgDefaults};
+let publicReady=false;
+function validRemoteConfig(value){
+  return value && typeof value==='object' && !Array.isArray(value) &&
+    validTimeRange(value.start,value.end) && Number.isInteger(value.slotMin) &&
+    value.slotMin>=5 && value.slotMin<=240 &&
+    Array.isArray(value.days) && value.days.length===7 && value.days.every(v=>typeof v==='boolean');
+}
+function applyConfig(value){
+  cfg={...cfgDefaults,...value};
+}
+function validServiceList(items){
+  return Array.isArray(items) && items.length>0 && items.every(validarServico) &&
+    new Set(items.map(s=>s.id)).size===items.length;
+}
 let services=[
   {id:1,name:'Corte de Cabelo',price:30,dur:40},
   {id:2,name:'Barba',price:15,dur:30},
@@ -427,10 +566,20 @@ let bookingReadError='';
 let lastBookingReadAt='';
 async function readBookingsOnly(){
   try{
-    const r=await fetch(DB+'/bookings.json',{cache:'no-store'});
+    const r=await dbFetch('/bookings');
     if(!r.ok)return {ok:false,error:'HTTP '+r.status+' — verifique as permissões de acesso à agenda'};
     return {ok:true,data:await r.json()};
   }catch(e){return {ok:false,error:'Falha de conexão ao consultar a agenda'};}
+}
+/* A agenda principal foi gravada originalmente como array. Um objeto com
+   chaves ou IDs duplicados não pode ser tratado silenciosamente como agenda
+   vazia: isso poderia ocultar reservas e produzir backups incompletos. */
+function leituraAgendaValida(raw){
+  if(raw===null)return true;
+  if(!Array.isArray(raw))return false;
+  if(!raw.every(bookingValido))return false;
+  const ids=raw.map(b=>String(b.id));
+  return new Set(ids).size===ids.length;
 }
 function applyBookingRead(result){
   lastBookingReadAt=new Date().toLocaleTimeString('pt-BR');
@@ -440,8 +589,7 @@ function applyBookingRead(result){
     /* Não limpa bookings em caso de erro. */
     return false;
   }
-  if(result.data!==null&&(typeof result.data!=='object'||Array.isArray(result.data)&&result.data.some(b=>b!==null&&!bookingValido(b))||
-      !Array.isArray(result.data)&&Object.values(result.data).some(b=>b!==null&&!bookingValido(b)))){
+  if(!leituraAgendaValida(result.data)){
     bookingReadState='error';
     bookingReadError='A agenda retornou dados em formato inesperado. Nenhum dado local foi descartado.';
     return false;
@@ -502,11 +650,9 @@ function criarPacoteBackup(lista){
 async function buscarReservasParaBackup(){
   const r=await readBookingsOnly();
   if(!r.ok)throw new Error('Falha na leitura do Firebase: '+r.error);
-  if(r.data!==null&&typeof r.data!=='object')
-    throw new Error('Formato inesperado no banco. Backup cancelado para evitar cópia incompleta.');
+  if(!leituraAgendaValida(r.data))
+    throw new Error('Formato, posições ou IDs inesperados no banco. Backup parcial bloqueado: exporte a agenda inteira no Console antes de corrigir os dados.');
   const lista=normalizeBookings(r.data);
-  if(lista.some(b=>!bookingValido(b)))
-    throw new Error('Há reservas com campos inválidos. Faça uma exportação de segurança diretamente pelo Console antes de continuar.');
   if(!lista.length)throw new Error('A agenda está vazia. Nenhuma cópia vazia foi feita; as cópias anteriores foram preservadas.');
   return lista;
 }
@@ -593,10 +739,15 @@ async function tentarBackupAutomaticoLocal(){
   try{
     const id='auto:'+todayISO();
     const existente=await executarNoBackup('readonly',s=>s.get(id));
-    if(existente)return;
+    if(existente){validarBackupSalvo(existente);return;}
     const lista=await buscarReservasParaBackup();
     const pacote=criarPacoteBackup(lista);
-    await executarNoBackup('readwrite',s=>s.add({...pacote,id}));
+    try{await executarNoBackup('readwrite',s=>s.add({...pacote,id}));}
+    catch(e){
+      if(e.name!=='ConstraintError')throw e;
+      validarBackupSalvo(await executarNoBackup('readonly',s=>s.get(id)));
+      return;
+    }
     await conferirCopiaSalva(id,pacote);
     avisoBackup('Cópia diária salva e conferida: '+new Date(pacote.exportedAt).toLocaleString('pt-BR')+' · '+quantidadeAtivaBackup(pacote)+' agendamentos ativos. Baixe o JSON para guardar uma cópia fora do navegador.');
     renderBackupPanel();
@@ -658,7 +809,28 @@ setInterval(()=>{if(admOk)tentarBackupAutomaticoLocal();},300000);
 /* ============ HELPERS ============ */
 const toMin=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
 const toHM=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
-const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const shopClock=new Intl.DateTimeFormat('en-CA',{
+  timeZone:'America/Bahia',year:'numeric',month:'2-digit',day:'2-digit',
+  hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+});
+function shopNow(){
+  const p=Object.fromEntries(shopClock.formatToParts(new Date()).map(x=>[x.type,x.value]));
+  return {date:p.year+'-'+p.month+'-'+p.day, minute:Number(p.hour)*60+Number(p.minute)};
+}
+const todayISO=()=>shopNow().date;
+function officeDatePlus(date,days){
+  const day=new Date(date+'T12:00:00Z');
+  day.setUTCDate(day.getUTCDate()+days);
+  return day.toISOString().slice(0,10);
+}
+function bookingInFuture(date,time){
+  const now=shopNow();
+  return date>now.date || (date===now.date && toMin(time)>now.minute);
+}
+function bookingEnded(b){
+  const now=shopNow();
+  return b.date<now.date || (b.date===now.date && toMin(b.time)+Number(b.dur)<=now.minute);
+}
 const overlaps=(s1,e1,s2,e2)=>s1<e2&&s2<e1;
 const svc=id=>services.find(s=>s.id==id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -672,27 +844,10 @@ function waClient(phone,msg){
   let n=String(phone||'').replace(/\D/g,'');
   if(!n)return '#';
   if(n.length===10||n.length===11)n='55'+n;
-  if(!n.startsWith('55'))return '#';
+  if(!/^55[0-9]{10,11}$/.test(n))return '#';
   return 'https://wa.me/'+n+(msg?'?text='+encodeURIComponent(msg):'');
 }
 
-/* ============ BOOT: carrega dados do banco ============ */
-async function boot(){
-  /* Carregamento apenas leitura. Nunca cria/reescreve dados no banco ao abrir a página. */
-  try{
-    const [remoteCfg,remoteServices,remoteBookingsResult]=await Promise.all([
-      dbGet('/cfg'),dbGet('/services'),readBookingsOnly()
-    ]);
-    if(remoteCfg&&typeof remoteCfg==='object')cfg={...cfg,...remoteCfg};
-    if(remoteServices!==undefined&&remoteServices!==null){
-      const list=Array.isArray(remoteServices)?remoteServices:Object.values(remoteServices);
-      if(list.some(x=>x&&x.name))services=list.filter(Boolean);
-    }
-    if(!applyBookingRead(remoteBookingsResult))
-      showBookingStatus('⚠️ Não foi possível carregar os agendamentos do Firebase ('+bookingReadError+'). Nenhum registro foi apagado pelo carregamento.');
-  }catch(e){bookingReadState='error';bookingReadError='Falha inesperada no carregamento';showBookingStatus('⚠️ Sem conexão com a agenda.');}
-  renderPublic();renderSlots();
-}
 function showBookingStatus(msg){
   document.getElementById('bkError').innerHTML='<div class="notice err" style="margin-top:14px">'+esc(msg)+'</div>';
 }
@@ -701,14 +856,13 @@ function showBookingStatus(msg){
 const svcOk=()=>services.filter(x=>x&&x.name&&String(x.name).trim());
 function renderPublic(){
   document.getElementById('servicesGrid').innerHTML=svcOk().map(s=>
-    `<div class="card"><h3>${esc(s.name)}</h3><div class="price gold-text">R$ ${Number(s.price).toFixed(2).replace('.',',')}</div><div class="dur">⏱ ${s.dur} minutos</div></div>`).join('');
+    `<div class="card"><h3>${esc(s.name)}</h3><div class="price gold-text">R$ ${Number(s.price).toFixed(2).replace('.',',')}</div><div class="dur">⏱ ${esc(s.dur)} minutos</div></div>`).join('');
   const previousService=document.getElementById('bkService').value;
   document.getElementById('bkService').innerHTML=svcOk().map(s=>
-    `<option value="${Number(s.id)}">${esc(s.name)} — R$ ${Number(s.price).toFixed(2).replace('.',',')} (${s.dur}min)</option>`).join('');
+    `<option value="${Number(s.id)}">${esc(s.name)} — R$ ${Number(s.price).toFixed(2).replace('.',',')} (${esc(s.dur)}min)</option>`).join('');
   if([...document.getElementById('bkService').options].some(o=>o.value===previousService))document.getElementById('bkService').value=previousService;
   const d=document.getElementById('bkDate');d.min=todayISO();
-  const mx=new Date();mx.setDate(mx.getDate()+7);
-  d.max=mx.getFullYear()+'-'+String(mx.getMonth()+1).padStart(2,'0')+'-'+String(mx.getDate()).padStart(2,'0');
+  d.max=officeDatePlus(d.min,7);
   const wa=waLink('Olá! Vim pelo site da Alfa Barbearia e gostaria de mais informações.');
   document.getElementById('floatWa').href=wa;
   document.getElementById('footWa').href=wa;
@@ -718,85 +872,307 @@ function renderPublic(){
 }
 function closeMenu(){document.getElementById('navLinks').classList.remove('open')}
 
-/* ============ SLOTS ============ */
+/* ============ HORÁRIOS + CALENDÁRIO POR SERVIÇO ============ */
 let selSlot=null;
-function renderSlots(){
-  const box=document.getElementById('slots');
-  const prevSel=selSlot; /* guarda a escolha do cliente para não perder ao atualizar */
-  box.innerHTML='';selSlot=null;
-  const date=document.getElementById('bkDate').value;
-  if(!date){box.innerHTML='<p class="slot-empty">Selecione uma data para ver os horários.</p>';return;}
-  const dateField=document.getElementById('bkDate');
-  if(date<dateField.min||date>dateField.max){box.innerHTML='<p class="slot-empty">Escolha uma data dentro dos próximos 7 dias.</p>';return;}
+let bookingCalendarMonth=null; /* primeiro dia do mês que está aberto */
+const bookingPad=n=>String(n).padStart(2,'0');
+const bookingDayKey=(y,m,d)=>`${y}-${bookingPad(m+1)}-${bookingPad(d)}`;
+const bookingService=()=>svc(document.getElementById('bkService').value);
+
+/* Exceções por data, armazenadas apenas em cfg.dateOverrides.
+   Padrão: {"2026-12-01":{"closed":true}} ou
+           {"2026-12-02":{"closed":false,"s1":"08:00","e1":"12:00","s2":"14:00","e2":"17:00"}}.
+   Nenhum agendamento é excluído ao modificar os horários. */
+const specialDayValidISO=date=>{
+  if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date))return false;
+  const d=new Date(date+'T12:00:00');
+  return !Number.isNaN(d.getTime())&&bookingDayKey(d.getFullYear(),d.getMonth(),d.getDate())===date;
+};
+function validTimeRange(a,b){
+  if(typeof a!=='string'||typeof b!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(a)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(b))return null;
+  const start=toMin(a),end=toMin(b);
+  return start>=0&&end>start&&end<1440?[start,end]:null;
+}
+function rangesFromHours(h,preferFallback=false,defaults=cfg){
+  const firstStart=preferFallback?((h&&(h.s1||h.s))||defaults.start):h&&h.s1;
+  const firstEnd=preferFallback?((h&&(h.e1||h.e))||defaults.end):h&&h.e1;
+  const primary=validTimeRange(firstStart,firstEnd);
+  const second=validTimeRange(h&&h.s2,h&&h.e2);
+  const ranges=[primary,second].filter(Boolean);
+  if(ranges.length===2&&ranges[1][0]<ranges[0][1])return [];
+  return ranges;
+}
+function getScheduleForDate(date,settings=cfg){
+  if(!specialDayValidISO(date))return {closed:true,ranges:[],special:false};
+  const override=settings.dateOverrides&&typeof settings.dateOverrides==='object'?
+    settings.dateOverrides[date]:null;
+  if(override&&typeof override==='object'){
+    if(override.closed===true)return {closed:true,ranges:[],special:true};
+    if(override.closed===false){
+      const ranges=rangesFromHours(override,false,settings);
+      return {closed:ranges.length===0,ranges,special:true};
+    }
+  }
   const dow=new Date(date+'T12:00:00').getDay();
-  const daysOpen=(Array.isArray(cfg.days)&&cfg.days.length===7)?cfg.days:[1,1,1,1,1,1,0];
-  if(!daysOpen[dow]){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
-  const s=svc(document.getElementById('bkService').value)||{dur:40,name:'Corte'};
-  const HrDia=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null; /* períodos individuais por dia */
-  const dH=HrDia?HrDia[dow]:null;
-  const ranges=[];
-  const addR=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)ranges.push([x,y]);};
-  addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end); /* período 1 (manhã) */
-  addR(dH&&dH.s2,dH&&dH.e2); /* período 2 (tarde) — opcional; o vão entre os períodos é o almoço */
-  const dayBk=bookingsAtivos().filter(b=>b.date===date&&!isNaN(toMin(b.time||''))&&b.dur>0);
-  /* GRADE DINÂMICA: passo ajustado à duração do serviço — múltiplo maior
-     de 20/10/5 que divide a duração. Ex.: Corte(40) e Corte+Barba(60) usam
-     grade de 20min (visual limpo); Barba(30)/Luzes(90) de 10min;
-     Sobrancelha(15) de 5min. O encaixe automático (blockUntil) espaça os
-     horários pela duração — nada se sobrepõe e os vãos são aproveitados. */
-  const step=s.dur%20===0?20:(s.dur%10===0?10:5);
-  /* monta a grade primeiro, depois calcula as estrelas */
+  const openDays=Array.isArray(settings.days)&&settings.days.length===7?
+    settings.days:[false,true,true,true,true,true,true];
+  if(!openDays[dow])return {closed:true,ranges:[],special:false};
+  const h=(Array.isArray(settings.hours)&&settings.hours.length===7)?settings.hours[dow]:null;
+  const ranges=rangesFromHours(h,true,settings);
+  return {closed:ranges.length===0,ranges,special:false};
+}
+async function readCurrentOffer(s){
+  const [freshCfg,freshServices]=await Promise.all([dbGet('/cfg'),dbGet('/services')]);
+  if(!validRemoteConfig(freshCfg)||!validServiceList(freshServices))
+    throw new Error('Expediente ou serviços não disponíveis para conferência.');
+  const offer=freshServices.find(x=>String(x.id)===String(s.id));
+  if(!offer||offer.name!==s.name||offer.dur!==s.dur||offer.price!==s.price)
+    throw new Error('O serviço, preço ou duração mudou. Confira a opção atualizada antes de continuar.');
+  return freshCfg;
+}
+function scheduleAllowsBooking(b,settings=cfg){
+  if(!bookingValido(b))return false;
+  const schedule=getScheduleForDate(b.date,settings);
+  if(schedule.closed)return false;
+  const start=toMin(b.time),end=start+Number(b.dur);
+  return schedule.ranges.some(([a,z])=>start>=a&&end<=z);
+}
+function validateSpecialDayTimes(s1,e1,s2,e2){
+  const first=validTimeRange(s1,e1);
+  if(!first)throw new Error('Informe horário inicial e final válidos para o primeiro período.');
+  if(Boolean(s2)!==Boolean(e2))throw new Error('Preencha início e fim do segundo período, ou deixe os dois vazios.');
+  const second=s2?validTimeRange(s2,e2):null;
+  if(s2&&!second)throw new Error('O segundo período de atendimento é inválido.');
+  if(second&&second[0]<first[1])throw new Error('Os períodos de atendimento não podem se sobrepor.');
+  return true;
+}
+async function assertSchedulePreservesBookings(proposed){
+  /* Consulta APENAS reservas: nunca faz POST, PATCH ou DELETE. */
+  const fetched=await readBookingsOnly();
+  if(!fetched.ok)throw new Error('Não foi possível verificar reservas existentes; alteração não salva. '+(fetched.error||''));
+  if(!leituraAgendaValida(fetched.data))
+    throw new Error('Formato ou IDs inesperados na agenda. Horário não salvo para proteger reservas.');
+  const list=normalizeBookings(fetched.data);
+  const conflicts=list.filter(b=>bookingAtivo(b)&&b.date>=todayISO()&&!scheduleAllowsBooking(b,proposed));
+  if(conflicts.length){
+    const example=conflicts.slice(0,3).map(b=>b.date.split('-').reverse().join('/')+' às '+b.time).join('; ');
+    throw new Error('Existem '+conflicts.length+' atendimento(s) ativo(s) fora do novo expediente ('+example+'). Cancele ou remarque esses atendimentos primeiro. Nenhum dado foi alterado.');
+  }
+}
+/* Atualiza cfg por ETag: salva exceções sem sobrescrever alterações simultâneas
+   de outra sessão administrativa. Sem alteração em /bookings. */
+function updateConfigETag(change,checkSchedule=false){
+  return enqueueWrite('cfg',()=>updateConfigNow(change,checkSchedule));
+}
+async function updateConfigNow(change,checkSchedule){
+  for(let attempt=0;attempt<5;attempt++){
+    const response=await dbFetch('/cfg',{headers:{'X-Firebase-ETag':'true'},cache:'no-store'});
+    if(!response.ok)throw new Error('Falha ao consultar configurações: HTTP '+response.status);
+    const tag=response.headers.get('ETag');
+    if(!tag)throw new Error('Firebase não retornou ETag; atualização bloqueada.');
+    const original=await response.json();
+    if(!admOk)throw new Error('Entre novamente na área do profissional.');
+    if(!validRemoteConfig(original))throw new Error('Configurações atuais ausentes ou inválidas. Nenhuma alteração foi feita.');
+    const proposed=change({...original,dateOverrides:{...(original.dateOverrides||{})}});
+    if(!validRemoteConfig(proposed))throw new Error('Configuração inválida.');
+    if(checkSchedule)await assertSchedulePreservesBookings(proposed);
+    if(!admOk)throw new Error('Entre novamente na área do profissional.');
+    const saved=await dbFetch('/cfg',{
+      method:'PUT',headers:{'If-Match':tag,'Content-Type':'application/json'},body:JSON.stringify(proposed)
+    });
+    if(saved.status===412)continue;
+    if(!saved.ok)throw new Error('Falha ao salvar expediente: HTTP '+saved.status);
+    configRevision++;
+    applyConfig(proposed);
+    return;
+  }
+  throw new Error('As configurações foram alteradas em outra sessão. Atualize a página e tente novamente.');
+}
+async function updateScheduleConfig(change){return updateConfigETag(change,true);}
+
+/* Uma única regra de disponibilidade serve à grade de horários e ao calendário.
+   Assim um dia só fica 'disponível' quando realmente cabe ao menos um horário
+   para a duração do serviço selecionado, considerando expediente, pausas,
+   reservas ativas e horários já passados de hoje. */
+function getBookingDayGrid(date,s){
+  const field=document.getElementById('bkDate');
+  if(!date||date<todayISO()||date>officeDatePlus(todayISO(),7)||date<field.min||date>field.max)return {grid:[],dayBk:[],reason:'outside'};
+  if(!publicReady||bookingReadState==='loading'||bookingReadState==='error')return {grid:[],dayBk:[],reason:'pending'};
+  const dia=new Date(date+'T12:00:00');
+  if(Number.isNaN(dia.getTime())||bookingDayKey(dia.getFullYear(),dia.getMonth(),dia.getDate())!==date)return {grid:[],dayBk:[],reason:'outside'};
+  const schedule=getScheduleForDate(date);
+  if(schedule.closed)return {grid:[],dayBk:[],reason:'closed'};
+  if(!s||!Number.isFinite(Number(s.dur))||Number(s.dur)<=0)return {grid:[],dayBk:[],reason:'pending'};
+  const dur=Number(s.dur);
+  const ranges=schedule.ranges;
+  const dayBk=bookingsAtivos().filter(b=>b.date===date&&bookingValido(b));
+  const step=Number.isInteger(Number(cfg.slotMin))&&Number(cfg.slotMin)>=5&&Number(cfg.slotMin)<=240?Number(cfg.slotMin):20;
+  const now=shopNow();
+  const isToday=date===now.date;
+  const nowMin=now.minute;
   const grid=[];
-  let blockUntil=-1; /* fim do último horário aceito: impede que dois horários oferecidos se sobreponham */
-  const ehHoje=date===todayISO();
-  const agora=new Date();
-  const agoraMin=agora.getHours()*60+agora.getMinutes(); /* horário de agora em minutos */
-  for(const rg of ranges){
-    for(let t=rg[0];t<=rg[1];t+=step){
-      if(t+s.dur>rg[1])break; /* ⛔ o serviço precisa terminar antes do fim do período */
-      /* riscado se: encosta em um agendamento existente OU começa antes do fim do horário anterior oferecido */
-      const hit=dayBk.some(b=>overlaps(t,t+s.dur,toMin(b.time),toMin(b.time)+b.dur));
-      const passou=ehHoje&&t<=agoraMin; /* ⛔ hoje: horário que já passou não pode ser marcado */
-      const off=hit||t<blockUntil||passou;
-      if(!off)blockUntil=t+s.dur;
+  let blockUntil=-1;
+  for(const range of ranges){
+    for(let t=range[0];t+dur<=range[1];t+=step){
+      const hit=dayBk.some(b=>overlaps(t,t+dur,toMin(b.time),toMin(b.time)+Number(b.dur)));
+      const passed=isToday&&t<=nowMin;
+      const off=hit||t<blockUntil||passed;
+      if(!off)blockUntil=t+dur;
       grid.push({t,off,hit});
     }
   }
-  if(!grid.length){box.innerHTML='<p class="slot-empty">⛔ Não atendemos neste dia. Escolha outra data.</p>';return;}
+  return {grid,dayBk,reason:grid.some(g=>!g.off)?'available':'full'};
+}
+
+function getBookingDayStatus(date){
+  return getBookingDayGrid(date,bookingService()).reason;
+}
+function updateBookingDateLabel(){
+  const value=document.getElementById('bkDate').value;
+  const label=document.getElementById('bkDateText');
+  const btn=document.getElementById('bkDateTrigger');
+  if(!value){label.textContent='Selecionar uma data';btn.removeAttribute('title');return;}
+  const d=new Date(value+'T12:00:00');
+  label.textContent=d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'long'});
+  btn.title='Data escolhida: '+d.toLocaleDateString('pt-BR');
+}
+function renderBookingCalendar(){
+  const panel=document.getElementById('bookingCalendar');
+  if(!panel)return;
+  updateBookingDateLabel();
+  const field=document.getElementById('bkDate');
+  if(!field.min||!field.max)return;
+  const minDate=new Date(field.min+'T12:00:00');
+  const maxDate=new Date(field.max+'T12:00:00');
+  if(!bookingCalendarMonth)bookingCalendarMonth=new Date(minDate.getFullYear(),minDate.getMonth(),1,12);
+  const monthIndex=d=>d.getFullYear()*12+d.getMonth();
+  if(monthIndex(bookingCalendarMonth)<monthIndex(minDate))bookingCalendarMonth=new Date(minDate.getFullYear(),minDate.getMonth(),1,12);
+  if(monthIndex(bookingCalendarMonth)>monthIndex(maxDate))bookingCalendarMonth=new Date(maxDate.getFullYear(),maxDate.getMonth(),1,12);
+  document.getElementById('bkMonthLabel').textContent=bookingCalendarMonth.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('bkPrevMonth').disabled=monthIndex(bookingCalendarMonth)<=monthIndex(minDate);
+  document.getElementById('bkNextMonth').disabled=monthIndex(bookingCalendarMonth)>=monthIndex(maxDate);
+  const grid=document.getElementById('bkCalendarDays');
+  grid.replaceChildren();
+  const year=bookingCalendarMonth.getFullYear(),month=bookingCalendarMonth.getMonth();
+  const offset=new Date(year,month,1,12).getDay();
+  const lastDay=new Date(year,month+1,0,12).getDate();
+  for(let i=0;i<offset;i++){
+    const blank=document.createElement('span');blank.className='bk-day-spacer';blank.setAttribute('aria-hidden','true');grid.appendChild(blank);
+  }
+  let freeDays=0,fullDays=0;
+  for(let day=1;day<=lastDay;day++){
+    const iso=bookingDayKey(year,month,day);
+    const status=getBookingDayStatus(iso);
+    const btn=document.createElement('button');
+    btn.type='button';btn.textContent=String(day);
+    btn.className='bk-day '+(status==='available'?'available':status==='full'?'unavailable':status==='closed'?'closed':status==='pending'?'pending':'outside');
+    const description=status==='available'?'com horários disponíveis':status==='full'?'sem horários para este serviço':status==='closed'?'fechado':status==='pending'?'aguardando consulta da agenda':'fora do período liberado';
+    btn.setAttribute('aria-label',`${day} de ${bookingCalendarMonth.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}: ${description}`);
+    btn.title=description;
+    if(status==='available'){
+      freeDays++;
+      if(field.value===iso){btn.classList.add('selected');btn.setAttribute('aria-pressed','true');}
+      btn.addEventListener('click',()=>selectBookingCalendarDay(iso));
+    }else{
+      btn.disabled=true;
+      if(status==='full')fullDays++;
+    }
+    grid.appendChild(btn);
+  }
+  const status=document.getElementById('bkCalendarStatus');
+  if(!publicReady||bookingReadState==='loading'||bookingReadState==='error')status.textContent='Não foi possível verificar as vagas. Confira a conexão antes de escolher uma data.';
+  else if(freeDays===0&&fullDays>0)status.textContent='Os dias riscados não têm horários para este serviço. Veja outro mês ou escolha outro serviço.';
+  else status.textContent='Dias riscados estão sem vaga para o serviço escolhido. Datas cinzas estão fechadas ou ainda não foram liberadas.';
+}
+function toggleBookingCalendar(){
+  const panel=document.getElementById('bookingCalendar');
+  const opening=panel.hidden;
+  panel.hidden=!opening;
+  document.getElementById('bkDateTrigger').setAttribute('aria-expanded',String(opening));
+  if(opening)renderBookingCalendar();
+}
+function closeBookingCalendar(){
+  document.getElementById('bookingCalendar').hidden=true;
+  document.getElementById('bkDateTrigger').setAttribute('aria-expanded','false');
+}
+function changeBookingMonth(delta){
+  if(!Number.isInteger(delta)||Math.abs(delta)!==1)return;
+  const date=bookingCalendarMonth||new Date(todayISO()+'T12:00:00');
+  bookingCalendarMonth=new Date(date.getFullYear(),date.getMonth()+delta,1,12);
+  renderBookingCalendar();
+}
+function selectBookingCalendarDay(iso){
+  /* Reconfere a disponibilidade no momento do clique. A transação no Firebase
+     também verifica novamente ao confirmar, caso outra pessoa reserve antes. */
+  if(getBookingDayStatus(iso)!=='available'){renderBookingCalendar();return;}
+  document.getElementById('bkDate').value=iso;
+  selSlot=null;
+  closeBookingCalendar();
+  renderSlots();
+}
+function bookingServiceChanged(){
+  selSlot=null;
+  const field=document.getElementById('bkDate');
+  const date=field.value;
+  if(date&&bookingReadState!=='loading'&&bookingReadState!=='error'&&getBookingDayStatus(date)!=='available'){
+    field.value='';
+    bookingCalendarMonth=null;
+  }
+  renderSlots();
+}
+
+function renderSlots(){
+  const box=document.getElementById('slots');
+  const prevSel=selSlot; /* preserva seleção ao atualizar, não ao trocar o serviço/data */
+  box.replaceChildren();selSlot=null;
+  renderBookingCalendar();
+  const date=document.getElementById('bkDate').value;
+  if(!date){box.innerHTML='<p class="slot-empty">Selecione uma data disponível no calendário.</p>';return;}
+  const s=bookingService();
+  const result=getBookingDayGrid(date,s);
+  if(result.reason==='outside'){box.innerHTML='<p class="slot-empty">Escolha uma data dentro do período liberado.</p>';return;}
+  if(result.reason==='pending'){box.innerHTML='<p class="slot-empty">⚠️ Não foi possível verificar os horários. Confira a conexão.</p>';return;}
+  if(result.reason==='closed'){box.innerHTML='<p class="slot-empty">⛔ Não atendemos nesta data. Escolha outra.</p>';return;}
+  const {grid,dayBk}=result;
+  if(result.reason==='full'){box.innerHTML='<p class="slot-empty">⛔ Sem horários disponíveis nesta data para este serviço. Escolha um dia sem risco no calendário.</p>';return;}
   const recSet={};
-  const isLunch=t=>{const h=Math.floor(t/60);return h>=12&&h<14;}; /* almoço: 12h às 13h59 (livre, mas sem ⭐) */
+  const isLunch=t=>{const h=Math.floor(t/60);return h>=12&&h<14;};
   const firstFree=grid.find(g=>!g.off&&!isLunch(g.t));
-  if(firstFree)recSet[firstFree.t]=true; /* 1º horário livre do dia */
-  /* primeiro horário livre APÓS o fim de cada atendimento (nunca antes, nunca no almoço) */
+  if(firstFree)recSet[firstFree.t]=true;
   dayBk.forEach(b=>{
-    const e=toMin(b.time)+b.dur;
-    const sl=grid.find(g=>!g.off&&g.t>=e&&!isLunch(g.t));
-    if(sl)recSet[sl.t]=true;
+    const finish=toMin(b.time)+Number(b.dur);
+    const chosen=grid.find(g=>!g.off&&g.t>=finish&&!isLunch(g.t));
+    if(chosen)recSet[chosen.t]=true;
   });
-  let any=false;
-  grid.forEach(g=>{
-    if(g.off&&!g.hit)return; /* esconde riscados de espaçamento: tela limpa, só aparecem livres e horários ocupados de verdade */
-    const d=document.createElement('div');
+  for(const g of grid){
+    if(g.off&&!g.hit)continue;
+    const d=document.createElement('button');d.type='button';
     d.className='slot'+(g.off?' off':'');
     if(!g.off){
-      if(recSet[g.t]){d.classList.add('rec');d.innerHTML='⭐ '+toHM(g.t);}
+      if(recSet[g.t]){d.classList.add('rec');d.textContent='⭐ '+toHM(g.t);}
       else d.textContent=toHM(g.t);
-      d.onclick=()=>{box.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selSlot=toHM(g.t);};
-      if(prevSel===toHM(g.t)){d.classList.add('sel');selSlot=prevSel;} /* mantém o horário escolhido mesmo após atualização automática */
-      any=true;
-    }
-    else d.textContent=toHM(g.t);
+      d.addEventListener('click',()=>{box.querySelectorAll('.slot').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selSlot=toHM(g.t);});
+      if(prevSel===toHM(g.t)){d.classList.add('sel');selSlot=prevSel;}
+    } else {d.textContent=toHM(g.t);d.disabled=true;}
     box.appendChild(d);
-  });
-  if(!any){box.innerHTML='<p class="slot-empty">Sem horários disponíveis nesta data.</p>';return;}
+  }
   const hint=document.createElement('p');
-  hint.className='slot-rec-hint';
-  hint.textContent='⭐ Horário recomendado';
-  box.appendChild(hint);
+  hint.className='slot-rec-hint';hint.textContent='⭐ Horário recomendado';box.appendChild(hint);
 }
 
 /* ============ BOOKING ============ */
 let savingBk=false;
+let pendingBooking=null;
+/* Só confirma uma gravação de resposta incerta quando reencontra o mesmo registro. */
+async function recoverBooking(candidate){
+  const result=await readBookingsOnly();
+  if(!result.ok||!leituraAgendaValida(result.data))return null;
+  const record=normalizeBookings(result.data).find(b=>b.id===candidate.id);
+  if(!record)return false;
+  if(!bookingAtivo(record)||['date','time','serviceId','name','phone','service','price','dur'].some(key=>record[key]!==candidate[key]))
+    throw new Error('A reserva foi localizada, mas sofreu alterações. Confirme a situação com a barbearia.');
+  return true;
+}
 async function submitBooking(){
   if(savingBk)return;
   const err=document.getElementById('bkError');err.innerHTML='';
@@ -805,52 +1181,74 @@ async function submitBooking(){
   const name=document.getElementById('bkName').value.trim();
   const phone=document.getElementById('bkPhone').value.trim();
   const s=svc(sid);
-  const fail=m=>err.innerHTML='<div class="notice err" style="margin-top:14px">'+m+'</div>';
-  if(!s||!Number.isFinite(Number(s.dur))||Number(s.dur)<=0)return fail('Serviço inválido. Atualize a página.');
-  if(bookingReadState==='error'||bookingReadState==='loading')return fail('Agenda indisponível para conferência. Atualize a página antes de reservar.');
+  const selectedTime=selSlot;
+  const fail=m=>showBookingStatus(m);
+  if(!validarServico(s))return fail('Serviço inválido. Atualize a página.');
+  if(!publicReady||bookingReadState==='error'||bookingReadState==='loading')return fail('Agenda, expediente ou serviços indisponíveis. Atualize a página antes de reservar.');
   if(!date)return fail('Selecione a data do atendimento.');
   if(date<todayISO())return fail('Não é possível agendar em datas passadas.');
   const dateField=document.getElementById('bkDate');
-  if(date>dateField.max)return fail('Agendamentos disponíveis somente para os próximos 7 dias.');
-  if(!cfg.days[new Date(date+'T12:00:00').getDay()])return fail('Não atendemos neste dia da semana.');
-  if(!selSlot)return fail('Escolha um horário disponível.');
-  if(!name)return fail('Informe seu nome.');
+  if(date>officeDatePlus(todayISO(),7)||date>dateField.max)return fail('Agendamentos disponíveis somente para os próximos 7 dias.');
+  if(getScheduleForDate(date).closed)return fail('Não atendemos nesta data. Escolha outra data disponível.');
+  if(!selectedTime)return fail('Escolha um horário disponível.');
+  if(!name||name.length>60)return fail('Informe seu nome com até 60 caracteres.');
   if(!/^\d{10,11}$/.test(phone.replace(/\D/g,'')))return fail('Informe um WhatsApp válido com DDD (10 ou 11 números).');
+  const st=toMin(selectedTime);
+  if(!bookingInFuture(date,selectedTime))return fail('⛔ Este horário já passou. Escolha um horário futuro.');
+  const bk={id:Date.now()*1000+Math.floor(Math.random()*1000),serviceId:s.id,service:s.name,price:s.price,dur:s.dur,date,time:selectedTime,name,phone};
+  if(!scheduleAllowsBooking(bk))return fail('⛔ Fora do expediente desta data. Escolha outro horário.');
   savingBk=true;
-  const st=toMin(selSlot);
-  const dowBk=new Date(date+'T12:00:00').getDay();
-  if(date===todayISO()){
-    const ag=new Date();
-    if(st<=ag.getHours()*60+ag.getMinutes()){savingBk=false;return fail('⛔ Este horário já passou. Escolha um horário futuro.');}
-  }
-  const HrBk=(cfg.hours&&cfg.hours.length===7)?cfg.hours:null;
-  const dHB=HrBk?HrBk[dowBk]:null;
-  const rangesBk=[];
-  const addRB=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)rangesBk.push([x,y]);};
-  addRB((dHB&&(dHB.s1||dHB.s))||cfg.start,(dHB&&(dHB.e1||dHB.e))||cfg.end);
-  addRB(dHB&&dHB.s2,dHB&&dHB.e2);
-  if(!rangesBk.some(r=>st>=r[0]&&st+s.dur<=r[1])){savingBk=false;return fail('⛔ Fora do expediente deste dia (ou não cabe antes do fechamento). Escolha outro horário.');}
-  const bk={id:Date.now()*1000+Math.floor(Math.random()*1000),serviceId:s.id,service:s.name,price:s.price,dur:s.dur,date,time:selSlot,name,phone};
-  let waWin=null;try{waWin=window.open('about:blank','_blank');}catch(e){} /* tenta abrir WhatsApp após a confirmação */
+  let waWin=null;
+  try{waWin=window.open('about:blank','_blank');if(waWin)waWin.opener=null;}catch(e){}
   try{
-    await mutateBookings(list=>{
-      if(list.some(b=>bookingAtivo(b)&&b.date===date&&overlaps(st,st+s.dur,toMin(b.time),toMin(b.time)+Number(b.dur||0)))){
-        const conflict=new Error('Este horário acabou de ser ocupado. Escolha outro.');conflict.isBookingConflict=true;throw conflict;
+    let saved=false;
+    if(pendingBooking){
+      const prior=pendingBooking;
+      saved=await recoverBooking(prior);
+      if(saved===null)throw new Error('Ainda não foi possível verificar a tentativa anterior. Tente novamente após a conexão voltar.');
+      const sameRequest=['date','time','serviceId','name','phone','service','price','dur'].every(key=>prior[key]===bk[key]);
+      if(saved&&!sameRequest){
+        throw new Error('A tentativa anterior foi registrada para '+prior.date.split('-').reverse().join('/')+' às '+prior.time+'. Confirme com a barbearia antes de fazer outra reserva.');
+      }
+      if(sameRequest)bk.id=prior.id;
+      pendingBooking=null;
+    }
+    if(!saved)await mutateBookings(async list=>{
+      const alreadySaved=list.find(b=>b.id===bk.id);
+      if(alreadySaved)throw new Error('A reserva já consta na agenda. Confirme o horário com a barbearia.');
+      const latestCfg=await readCurrentOffer(s);
+      if(!bookingInFuture(date,selectedTime)||date>officeDatePlus(todayISO(),7)||!scheduleAllowsBooking(bk,latestCfg))
+        throw new Error('Esta data ou horário ficou indisponível. Selecione outra vaga.');
+      if(list.some(b=>bookingAtivo(b)&&b.date===date&&overlaps(st,st+bk.dur,toMin(b.time),toMin(b.time)+Number(b.dur)))){
+        throw new Error('Este horário acabou de ser ocupado. Escolha outro.');
       }
       return [...list,bk];
     });
   }catch(e){
-    if(waWin)try{waWin.close();}catch(_){}
-    savingBk=false;
-    if(e.isBookingConflict){renderSlots();return fail(e.message);}
-    return fail('Não foi possível confirmar. Confira se o horário apareceu na agenda antes de tentar novamente. '+esc(e.message||'Verifique a conexão.'));
+    if(e.commitUnknown){
+      pendingBooking=bk;
+      let confirmed=false;
+      try{confirmed=(await recoverBooking(bk))===true;}catch(error){e=error;}
+      if(confirmed){pendingBooking=null;}
+      else{
+        if(waWin)waWin.close();
+        savingBk=false;
+        return fail('Ainda não foi possível confirmar esta reserva. Confira a agenda antes de tentar outro horário. '+e.message);
+      }
+    }else{
+      if(waWin)waWin.close();
+      savingBk=false;
+      await refreshBookings();
+      return fail(e.message||'Não foi possível confirmar a reserva.');
+    }
   }
   savingBk=false;
-  const msg='✅ *AGENDAMENTO CONFIRMADO — ALFA BARBEARIA*\n\n👤 Cliente: '+name+'\n💈 Serviço: '+s.name+'\n📅 Data: '+date.split('-').reverse().join('/')+' às '+selSlot+'\n💰 Valor: R$ '+s.price.toFixed(2).replace('.',',')+'\n\nAté breve!';
-  document.getElementById('doneMsg').innerHTML='<b style="color:var(--gold)">'+esc(s.name)+'</b> · '+date.split('-').reverse().join('/')+' às <b>'+selSlot+'</b><br>Cliente: '+esc(name);
+  const dateLabel=bk.date.split('-').reverse().join('/');
+  const msg='✅ *AGENDAMENTO CONFIRMADO — ALFA BARBEARIA*\n\n👤 Cliente: '+bk.name+'\n💈 Serviço: '+bk.service+'\n📅 Data: '+dateLabel+' às '+bk.time+'\n💰 Valor: R$ '+bk.price.toFixed(2).replace('.',',')+'\n\nAté breve!';
+  document.getElementById('doneMsg').innerHTML='<b style="color:var(--gold)">'+esc(bk.service)+'</b> · '+dateLabel+' às <b>'+esc(bk.time)+'</b><br>Cliente: '+esc(bk.name);
   const wa=waLink(msg);
   document.getElementById('doneWa').href=wa;
-  if(waWin){try{waWin.location.href=wa;}catch(e){waWin=null;}} /* abre o WhatsApp com a confirmação automaticamente */
+  if(waWin){try{if(wa==='#')waWin.close();else waWin.location.href=wa;}catch(e){waWin=null;}} /* abre o WhatsApp com a confirmação automaticamente */
   document.getElementById('bookingForm').classList.add('hidden');
   document.getElementById('bookingDone').classList.remove('hidden');
   document.getElementById('bookingDone').scrollIntoView({behavior:'smooth',block:'center'});
@@ -859,24 +1257,48 @@ function resetBooking(){
   document.getElementById('bookingDone').classList.add('hidden');
   document.getElementById('bookingForm').classList.remove('hidden');
   document.getElementById('bkName').value='';document.getElementById('bkPhone').value='';
-  document.getElementById('bkDate').value='';renderSlots();
+  document.getElementById('bkDate').value='';selSlot=null;renderSlots();
 }
 
 /* ============ ADMIN ============ */
 let admOk=false;
-function adminLogin(){
-  const p=document.getElementById('admPass').value;
-  if(p && typeof cfg.password==='string' && p===cfg.password){admOk=true;document.getElementById('adminLogin').classList.add('hidden');
-    document.getElementById('adminPanel').classList.remove('hidden');renderAdmin();renderBackupPanel();tentarBackupAutomaticoLocal();}
+async function adminLogin(){
+  const entry=document.getElementById('admPass');
+  const p=entry.value;
+  if(!p){document.getElementById('admErr').textContent='Informe a senha.';return;}
+  const current=await dbGet('/cfg');
+  if(entry.value!==p||admOk)return;
+  if(!validRemoteConfig(current)){
+    document.getElementById('admErr').textContent='Não foi possível consultar o acesso. Confira a conexão.';
+    return;
+  }
+  if(p && typeof current.password==='string' && p===current.password){
+    configRevision++;
+    applyConfig(current);
+    entry.value='';
+    document.getElementById('admErr').textContent='';
+    admOk=true;document.getElementById('adminLogin').classList.add('hidden');
+    document.getElementById('adminPanel').classList.remove('hidden');renderAdmin();renderBackupPanel();refreshBookings();tentarBackupAutomaticoLocal();}
   else document.getElementById('admErr').innerHTML='<div class="notice err" style="margin-top:14px">Senha incorreta.</div>';
 }
-function adminLogout(){admOk=false;document.getElementById('adminPanel').classList.add('hidden');
+function adminLogout(){admOk=false;rsClose();document.getElementById('adminPanel').classList.add('hidden');
   document.getElementById('adminLogin').classList.remove('hidden');document.getElementById('admPass').value='';}
 function showTab(t,el){document.querySelectorAll('.tab[data-tab]').forEach(x=>x.classList.remove('active'));
   if(el)el.classList.add('active');
-  ['ag','sv','hr','cfg','bkup'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('hidden',x!==t));}
+  ['ag','sv','hr','cfg','bkup'].forEach(x=>document.getElementById('tab-'+x).classList.toggle('hidden',x!==t));
+  /* Apenas renderiza formulários ao ABRIR a aba. Atualização automática
+     nunca apaga campos que o barbeiro está digitando. */
+  if(t==='hr')renderTabHr();
+  if(t==='sv')renderTabSv();
+  if(t==='cfg')renderTabCfg();
+  if(t==='bkup')renderBackupPanel();}
 
-function renderAdmin(){renderTabAg();renderTabSv();renderTabHr();renderTabCfg();}
+function renderAdmin(){
+  renderTabAg();
+  for(const [tab,render] of [['sv',renderTabSv],['hr',renderTabHr],['cfg',renderTabCfg]]){
+    if(document.getElementById('tab-'+tab).classList.contains('hidden'))render();
+  }
+}
 
 function renderTabAg(){
   const box=document.getElementById('tab-ag');
@@ -885,12 +1307,27 @@ function renderTabAg(){
   const ativos=bookingsAtivos();
   ativos.forEach(b=>{if(typeof b.date==='string'&&b.date>=t)fut.push(b);else old++;});
   const readingError=bookingReadState==='error';
-  const diag='<div class="notice '+(readingError?'err':'info')+'" style="margin-bottom:14px">'
-    +(readingError?'⚠️ <b>Falha ao ler agendamentos.</b> '+esc(bookingReadError)+'; a lista abaixo pode estar desatualizada.'
-      :bookingReadState==='loading'?'⏳ Consultando a Agenda de Clientes…'
-      :'<b>Agenda de Clientes:</b> '+ativos.length+' agendamento(s) ativo(s) · '+fut.length+' para hoje ou datas futuras · '+old+' antigo(s).')
-    +(lastBookingReadAt?' <small style="opacity:.8">Última consulta: '+esc(lastBookingReadAt)+'</small>':'')
-    +' <button class="btn btn-outline" style="padding:5px 12px;font-size:12px;margin-left:6px" onclick="refreshBookings().catch(()=>{})">Atualizar agenda</button></div>';
+  /* Resumo apenas de agendamentos ATIVOS, agrupados pela data.
+     Esta mudança é somente de leitura: não altera /bookings nem o backup. */
+  const quantidadePorDia={};
+  fut.forEach(b=>{quantidadePorDia[b.date]=(quantidadePorDia[b.date]||0)+1;});
+  const diasAgendados=Object.keys(quantidadePorDia).sort();
+  const situacao=readingError
+    ?'<div class="notice err"><b>Falha ao atualizar a agenda.</b> '+esc(bookingReadError)+' — as quantidades abaixo podem estar desatualizadas.</div>'
+    :bookingReadState==='loading'
+    ?'<div class="notice info">Consultando os agendamentos…</div>':'';
+  const cardsDias=diasAgendados.map(d=>{
+    const dataPt=d.split('-').reverse().join('/');
+    const qtd=quantidadePorDia[d];
+    return '<div class="day-count-item"><span>📅 '+esc(dataPt)+'</span><strong>👥 '+qtd+' '+(qtd===1?'cliente':'clientes')+'</strong></div>';
+  }).join('');
+  const diag=situacao+'<div class="day-count-panel">'
+    +'<div class="day-count-top"><strong>Clientes agendados por dia</strong>'
+    +'<button type="button" class="btn btn-outline" onclick="refreshBookings().catch(()=>{})">Atualizar agenda</button></div>'
+    +(diasAgendados.length?'<div class="day-count-grid">'+cardsDias+'</div>'
+      :'<p class="day-count-empty">'+(readingError||bookingReadState==='loading'?'Nenhuma contagem confirmada nesta consulta.':'Nenhum cliente agendado para hoje ou datas futuras.')+'</p>')
+    +'<small>Somente reservas ativas; cancelamentos não entram na contagem.'
+    +(lastBookingReadAt?' Última consulta: '+esc(lastBookingReadAt):'')+'</small></div>';
   let top='';
   if(old>0){
     top='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
@@ -911,10 +1348,11 @@ function renderTabAg(){
     return;
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  /* resumo semanal: total da semana atual + da semana passada (guardado antes da limpeza de segunda) */
+  /* Totais da semana atual, com o dado legado da semana anterior quando disponível. */
   const mSeg=mondayISO();
-  const recSem=bookingsAtivos().filter(b=>b.date>=mSeg&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
-  const pendSem=bookingsAtivos().filter(b=>b.date>=mSeg&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  const weekEnd=officeDatePlus(mSeg,7);
+  const recSem=ativos.filter(b=>b.date>=mSeg&&b.date<weekEnd&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  const pendSem=ativos.filter(b=>b.date>=mSeg&&b.date<weekEnd&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
   top=diag+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
     +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana — recebido: <b>R$ '+recSem.toFixed(2).replace('.',',')+'</b></span>'
     +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
@@ -927,11 +1365,10 @@ function renderTabAg(){
     +((pend[d]||0)>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:6px 14px;border-radius:999px">⏳ A receber: R$ '+pend[d].toFixed(2).replace('.',',')+'</span>':'')
     +'</div>';
   let html=top,lastDate='';
-  const agora=Date.now();
   sorted.forEach(b=>{
-    if(b.date!==lastDate){lastDate=b.date;html+='<h3 style="color:var(--gold);margin:22px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3>'+totalHtml(b.date);}
+    if(b.date!==lastDate){lastDate=b.date;const qt=quantidadePorDia[b.date]||0;html+='<h3 class="day-client-heading">📅 '+b.date.split('-').reverse().join('/')+' <span class="day-client-badge">👥 '+qt+' '+(qt===1?'cliente':'clientes')+'</span></h3>'+totalHtml(b.date);}
     const atendido=!!b.done; /* confirmado manualmente pelo barbeiro */
-    const podeConfirmar=!atendido&&new Date(b.date+'T'+b.time+':00').getTime()+Number(b.dur||0)*60000<agora; /* horário já passou: libera o botão de confirmar */
+    const podeConfirmar=!atendido&&bookingEnded(b); /* horário já passou: libera o botão de confirmar */
     html+='<div class="card" style="padding:16px 20px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;'+(atendido?'opacity:.65;border-left:4px solid #2ecc71;':'')+'">'
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +(atendido?' <span class="badge" style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71">✅ Atendido</span>':'')
@@ -961,10 +1398,10 @@ function fillOld(){
   if(!el)return;
   const t=todayISO();
   const old=bookingsAtivos().filter(b=>b.date<t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const totaisOld={};old.forEach(b=>{totaisOld[b.date]=(totaisOld[b.date]||0)+Number(b.price||0);});
+  const totaisOld={},clientesOld={};old.forEach(b=>{totaisOld[b.date]=(totaisOld[b.date]||0)+Number(b.price||0);clientesOld[b.date]=(clientesOld[b.date]||0)+1;});
   let last='',html='';
   old.forEach(b=>{
-    if(b.date!==last){last=b.date;html+='<h3 style="color:var(--muted);margin:18px 0 8px">📅 '+b.date.split('-').reverse().join('/')+'</h3><div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">💰 Total do dia: <b style="color:var(--gold)">R$ '+totaisOld[b.date].toFixed(2).replace('.',',')+'</b></div>';}
+    if(b.date!==last){last=b.date;const qt=clientesOld[b.date]||0;html+='<h3 class="day-client-heading day-client-heading-past">📅 '+b.date.split('-').reverse().join('/')+' <span class="day-client-badge">👥 '+qt+' '+(qt===1?'cliente':'clientes')+'</span></h3><div style="font-size:13px;color:var(--muted);margin:-4px 0 10px">💰 Total do dia: <b style="color:var(--gold)">R$ '+totaisOld[b.date].toFixed(2).replace('.',',')+'</b></div>';}
     html+='<div class="card" style="padding:14px 18px;margin-bottom:10px;opacity:.75;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
       +'<div><b style="color:var(--gold)">'+esc(b.time)+'</b> — '+esc(b.service)+' <span class="badge">R$ '+Number(b.price).toFixed(2).replace('.',',')+'</span>'
       +(b.done?' <span class="badge" style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71">✅ Atendido</span>':' <span class="badge">⏳ Não confirmado</span>')
@@ -978,32 +1415,44 @@ async function clearOld(){
   alert('Exclusão definitiva do histórico desativada por segurança. Os agendamentos ficam preservados, inclusive os cancelados.');
 }
 async function changeService(id,sid){
+  if(!admOk)return;
   const b=bookings.find(x=>x.id===id);if(!b||!bookingAtivo(b))return;
   const sv=svcOk().find(x=>String(x.id)===String(sid));if(!sv)return;
   if(!confirm('Trocar o serviço de "'+b.service+'" para "'+sv.name+'" (R$ '+sv.price.toFixed(2).replace('.',',')+')?')){renderAdmin();return;}
   try{
-    await mutateBookings(list=>{
+    await mutateBookings(async list=>{
+      const latestCfg=await readCurrentOffer(sv);
       const target=list.find(x=>x.id===id);if(!target||!bookingAtivo(target))throw new Error('Agendamento não encontrado ou cancelado.');
+      if(target.serviceId!==b.serviceId||target.date!==b.date||target.time!==b.time||
+         Number(target.dur)!==Number(b.dur))
+        throw new Error('Esta reserva foi alterada em outro aparelho. Atualize o painel antes de trocar o serviço.');
+      if(!scheduleAllowsBooking({...target,dur:sv.dur},latestCfg))
+        throw new Error('A nova duração não cabe no expediente. Escolha outro serviço ou remarque.');
       const st=toMin(target.time);
-      const bate=list.find(x=>bookingAtivo(x)&&x.id!==id&&x.date===target.date&&overlaps(st,st+sv.dur,toMin(x.time),toMin(x.time)+x.dur));
+      const bate=list.find(x=>bookingAtivo(x)&&x.id!==id&&x.date===target.date&&overlaps(st,st+sv.dur,toMin(x.time),toMin(x.time)+Number(x.dur)));
       if(bate)throw new Error('O serviço coincide com o agendamento das '+bate.time+'. Remarque antes.');
       return list.map(x=>x.id===id?{...x,serviceId:sv.id,service:sv.name,price:sv.price,dur:sv.dur}:x);
     });
-    renderAdmin();
-  }catch(e){netErr();}
+    renderAdmin();renderSlots();
+  }catch(e){alert('Não foi possível trocar o serviço: '+(e.message||'erro de conexão.'));renderAdmin();}
 }
 async function doneBk(id){
+  if(!admOk)return;
   const b=bookings.find(x=>x.id===id);if(!b||!bookingAtivo(b))return;
   if(!confirm('Confirmar que '+b.name+' já foi atendido? O valor entra em "Recebido".'))return;
   try{
     await mutateBookings(list=>{
-      if(!list.some(x=>x.id===id&&bookingAtivo(x)))throw new Error('Agendamento não encontrado ou cancelado.');
+      const current=list.find(x=>x.id===id&&bookingAtivo(x));
+      if(!current||current.date!==b.date||current.time!==b.time||
+         Number(current.dur)!==Number(b.dur)||current.serviceId!==b.serviceId||!bookingEnded(current))
+        throw new Error('A reserva mudou ou o horário ainda não terminou. Atualize a agenda antes de confirmar.');
       return list.map(x=>x.id===id?{...x,done:true}:x);
     });
     renderAdmin();
-  }catch(e){netErr();}
+  }catch(e){alert('Não foi possível confirmar o atendimento: '+e.message);}
 }
 async function cancelBk(id){
+  if(!admOk)return;
   const atual=bookings.find(b=>b&&b.id===id);
   if(!atual||!bookingAtivo(atual))return;
   if(!confirm('Cancelar o atendimento de '+atual.name+' SEM APAGAR o registro? O horário será liberado e a reserva ficará no histórico de cancelados.'))return;
@@ -1011,6 +1460,9 @@ async function cancelBk(id){
     await mutateBookings(list=>{
       const encontrado=list.find(b=>b.id===id);
       if(!encontrado||!bookingAtivo(encontrado))throw new Error('A reserva já está cancelada ou não existe.');
+      if(encontrado.date!==atual.date||encontrado.time!==atual.time||encontrado.serviceId!==atual.serviceId||
+         encontrado.done!==atual.done||Number(encontrado.dur)!==Number(atual.dur))
+        throw new Error('O atendimento mudou. Atualize a agenda antes de cancelar.');
       return list.map(b=>b.id===id?{...b,status:'cancelled',cancelledAt:Date.now()}:b);
     });
     renderTabAg();renderPublic();renderSlots();
@@ -1019,6 +1471,7 @@ async function cancelBk(id){
 }
 let rsB=null;
 function reschedule(id){
+  if(!admOk)return;
   const b=bookings.find(x=>x.id==id);if(!b||!bookingAtivo(b))return;
   rsB=b;
   document.getElementById('rsName').textContent=b.name+' — '+b.service;
@@ -1033,36 +1486,47 @@ function rsCheck(){
   if(!rsB){warn.textContent='';return false;}
   const date=document.getElementById('rsDate').value,time=document.getElementById('rsTime').value;
   if(!date||!time){warn.textContent='Escolha a data e o horário.';return false;}
-  const dow=new Date(date+'T12:00:00').getDay();
-  if(!(cfg.days||[])[dow]){warn.textContent='⛔ Não atendemos neste dia da semana.';return false;}
+  if(!specialDayValidISO(date)||date<todayISO()){
+    warn.textContent='⛔ Não é permitido remarcar para uma data passada ou inválida.';return false;
+  }
   const st=toMin(time);
-  if(date===todayISO()&&st<=new Date().getHours()*60+new Date().getMinutes()){warn.textContent='⛔ Esse horário de hoje já passou.';return false;}
-  const dH=(cfg.hours&&cfg.hours.length===7)?cfg.hours[dow]:null;
-  const ranges=[];const addR=(a,b)=>{const x=toMin(a||''),y=toMin(b||'');if(!isNaN(x)&&!isNaN(y)&&y>x)ranges.push([x,y]);};
-  addR((dH&&(dH.s1||dH.s))||cfg.start,(dH&&(dH.e1||dH.e))||cfg.end);
-  addR(dH&&dH.s2,dH&&dH.e2);
-  if(!ranges.some(r=>st>=r[0]&&st+rsB.dur<=r[1])){warn.textContent='⛔ Fora do expediente deste dia ou não cabe antes do fechamento.';return false;}
-  if(bookings.some(x=>bookingAtivo(x)&&x.id!==rsB.id&&x.date===date&&overlaps(st,st+rsB.dur,toMin(x.time),toMin(x.time)+x.dur))){warn.textContent='⛔ Já existe agendamento neste horário.';return false;}
+  if(!bookingInFuture(date,time)){warn.textContent='⛔ Esse horário de hoje já passou.';return false;}
+  if(!scheduleAllowsBooking({...rsB,date,time})){
+    warn.textContent='⛔ Esta data está fechada ou o atendimento não cabe no expediente.';return false;
+  }
+  if(bookings.some(x=>bookingAtivo(x)&&x.id!==rsB.id&&x.date===date&&overlaps(st,st+Number(rsB.dur),toMin(x.time),toMin(x.time)+Number(x.dur)))){warn.textContent='⛔ Já existe agendamento neste horário.';return false;}
   warn.textContent='';
   return true;
 }
 document.addEventListener('change',e=>{if((e.target.id==='rsDate'||e.target.id==='rsTime')&&rsB)rsCheck();});
+let savingReschedule=false;
 async function rsConfirm(){
-  if(!rsB)return;
-  if(!rsCheck())return;
+  const original=rsB;
+  if(!admOk||!original||savingReschedule||!rsCheck())return;
   const nd=document.getElementById('rsDate').value,nt=document.getElementById('rsTime').value;
-  if(!confirm('Remarcar '+rsB.name+' para '+nd.split('-').reverse().join('/')+' às '+nt+'?'))return;
+  if(!confirm('Remarcar '+original.name+' para '+nd.split('-').reverse().join('/')+' às '+nt+'?'))return;
+  savingReschedule=true;
   try{
-    await mutateBookings(list=>{
-      const target=list.find(x=>x.id===rsB.id);
+    await mutateBookings(async list=>{
+      const target=list.find(x=>x.id===original.id);
       if(!target||!bookingAtivo(target))throw new Error('Agendamento cancelado ou inexistente.');
+      if(target.date!==original.date||target.time!==original.time||target.done!==original.done||
+         target.serviceId!==original.serviceId||Number(target.dur)!==Number(original.dur))
+        throw new Error('Esta reserva foi modificada em outro aparelho. Atualize a agenda antes de remarcar.');
+      const latestCfg=await dbGet('/cfg');
+      if(!validRemoteConfig(latestCfg)||!bookingInFuture(nd,nt)||
+         !scheduleAllowsBooking({...target,date:nd,time:nt},latestCfg))
+        throw new Error('A data ou o novo horário ficou indisponível.');
       const start=toMin(nt);
-      if(list.some(x=>bookingAtivo(x)&&x.id!==target.id&&x.date===nd&&overlaps(start,start+Number(target.dur),toMin(x.time),toMin(x.time)+Number(x.dur)))){
+      if(list.some(x=>bookingAtivo(x)&&x.id!==target.id&&x.date===nd&&overlaps(start,start+Number(target.dur),toMin(x.time),toMin(x.time)+Number(x.dur))))
         throw new Error('O novo horário foi ocupado por outra pessoa.');
-      }
-      return list.map(x=>x.id===rsB.id?{...x,date:nd,time:nt}:x);
-    });rsClose();renderAdmin();renderSlots();
-  }catch(e){netErr();}
+      return list.map(x=>x.id===original.id?{...x,date:nd,time:nt}:x);
+    });
+    if(rsB===original)rsClose();
+    if(admOk)renderAdmin();
+    renderSlots();
+  }catch(e){alert('Não foi possível remarcar: '+(e.message||'erro de conexão.'));}
+  finally{savingReschedule=false;}
 }
 function renderTabSv(){
   const box=document.getElementById('tab-sv');
@@ -1075,86 +1539,216 @@ function renderTabSv(){
     +'<br><button class="btn btn-gold" onclick="addService()">ADICIONAR</button><div id="svErr"></div>';
 }
 async function addService(){
-  const n=document.getElementById('svName').value.trim(),p=parseFloat(document.getElementById('svPrice').value),d=parseInt(document.getElementById('svDur').value);
+  if(!admOk)return;
+  const n=document.getElementById('svName').value.trim();
+  const p=Number(document.getElementById('svPrice').value),d=Number(document.getElementById('svDur').value);
   const err=document.getElementById('svErr');
-  if(!n||!(p>0)||!(d>0)){err.innerHTML='<div class="notice err" style="margin-top:12px">Preencha nome, preço e duração válidos.</div>';return;}
+  if(!n||n.length>100||!Number.isFinite(p)||p<=0||p>100000||
+     !Number.isInteger(d)||d<5||d>720){
+    err.innerHTML='<div class="notice err" style="margin-top:12px">Informe nome (até 100 caracteres), preço válido e duração de 5 a 720 minutos.</div>';return;
+  }
   try{
-    const fresh=await getSv();
-    const novo=[...fresh,{id:Date.now(),name:n,price:p,dur:d}];
-    await dbPut('/services',novo);
-    services=novo;
-    renderTabSv();renderPublic();
-    err.innerHTML='<div class="notice ok" style="margin-top:12px">Serviço adicionado!</div>';
-  }catch(e){netErr();}
+    await mutateServices(fresh=>{
+      const id=Math.max(Date.now(),...fresh.map(x=>x.id+1));
+      return [...fresh,{id,name:n,price:p,dur:d}];
+    });
+    renderTabSv();renderPublic();renderSlots();
+    document.getElementById('svErr').textContent='Serviço adicionado e confirmado no Firebase.';
+  }catch(e){alert('Não foi possível adicionar serviço: '+e.message);}
 }
 async function editService(id){
-  const s=services.find(x=>x.id==id);if(!s)return;
+  if(!admOk)return;
+  const s=services.find(x=>x.id===id);if(!s)return;
   const np=prompt('Novo preço de "'+s.name+'" (R$):',s.price);
   if(np===null)return;
   const nd=prompt('Nova duração de "'+s.name+'" em minutos:',s.dur);
   if(nd===null)return;
-  const p=parseFloat(np),d=parseInt(nd);
-  if(!(p>0)||!(d>=5)){alert('Valores inválidos. Preço maior que zero e duração de pelo menos 5 minutos.');return;}
+  const p=Number(np),d=Number(nd);
+  if(!Number.isFinite(p)||p<=0||p>100000||!Number.isInteger(d)||d<5||d>720){
+    alert('Preço inválido ou duração fora de 5 a 720 minutos.');return;
+  }
+  const original=JSON.stringify(s);
   try{
-    const fresh=await getSv();
-    const novo=fresh.map(x=>x.id===id?{...x,price:p,dur:d}:x);
-    await dbPut('/services',novo);
-    services=novo;
+    await mutateServices(fresh=>{
+      const item=fresh.find(x=>x.id===id);
+      if(!item)throw new Error('O serviço não existe mais.');
+      if(JSON.stringify(item)!==original)
+        throw new Error('Este serviço foi alterado em outro aparelho. Reabra a aba para conferir antes de salvar.');
+      return fresh.map(x=>x.id===id?{...x,price:p,dur:d}:x);
+    });
     renderTabSv();renderPublic();renderSlots();
-    alert('Serviço atualizado! Novos agendamentos já usam o novo tempo.');
-  }catch(e){netErr();}
+    alert('Serviço atualizado sem sobrescrever alterações de outras sessões.');
+  }catch(e){alert('Serviço não atualizado: '+e.message);}
 }
 async function delService(id){
-  if(!confirm('Excluir este serviço?'))return;
+  if(!admOk)return;
+  const original=services.find(s=>s.id===id);if(!original)return;
+  if(!confirm('Excluir o serviço "'+original.name+'"? Reservas já existentes não serão apagadas.'))return;
   try{
-    const fresh=await getSv();
-    const novo=fresh.filter(s=>s.id!==id);
-    await dbPut('/services',novo);
-    services=novo;
+    await mutateServices(async fresh=>{
+      const actualReservations=await readBookingsOnly();
+      if(!actualReservations.ok||!leituraAgendaValida(actualReservations.data))
+        throw new Error('Não foi possível conferir todos os agendamentos existentes. Exclusão cancelada.');
+      if(normalizeBookings(actualReservations.data).some(b=>bookingAtivo(b)&&!b.done&&
+          b.date>=todayISO()&&String(b.serviceId)===String(id)))
+        throw new Error('Há clientes agendados neste serviço. Remarque ou conclua os atendimentos antes de excluir.');
+      const atual=fresh.find(s=>s.id===id);
+      if(!atual)throw new Error('O serviço já foi removido em outra sessão.');
+      if(JSON.stringify(atual)!==JSON.stringify(original))
+        throw new Error('O serviço foi alterado em outro aparelho. Confira antes de excluir.');
+      if(fresh.length<2)throw new Error('Não é permitido deixar a barbearia sem serviços.');
+      return fresh.filter(s=>s.id!==id);
+    });
     renderTabSv();renderPublic();renderSlots();
-  }catch(e){netErr();}
+  }catch(e){alert('Serviço não excluído: '+e.message);}
 }
 
+let weeklyHoursBaseline=null;
+let specialDayBaseline=null;
+function scheduleWeeklySignature(settings){
+  return JSON.stringify({days:settings.days||[],hours:settings.hours||null,slotMin:settings.slotMin});
+}
 function renderTabHr(){
+  weeklyHoursBaseline=scheduleWeeklySignature(cfg);
   const box=document.getElementById('tab-hr');
   const H=(cfg.hours&&cfg.hours.length===7)?cfg.hours:cfg.days.map(()=>({s:cfg.start,e:cfg.end})); /* compatibilidade: se ainda não tem horário por dia, usa o geral */
   const checks=cfg.days.map((v,i)=>{
-    const s1=H[i].s1||H[i].s||cfg.start, e1=H[i].e1||H[i].e||cfg.end;
-    const s2=H[i].s2||(v?'14:00':''), e2=H[i].e2||(v?'18:00':''); /* sugere 14h–18h nos dias abertos; deixe vazio para só manhã */
+    const h=H[i]||{};
+    const s1=h.s1||h.s||cfg.start, e1=h.e1||h.e||cfg.end;
+    const s2=h.s2||'', e2=h.e2||''; /* Não inventa turnos de tarde ao abrir o painel. */
     return '<div class="day-check" style="margin-bottom:16px">'
       +'<label style="display:block;margin-bottom:6px"><input type="checkbox" id="day'+i+'" '+(v?'checked':'')+'> <b>'+DAYS[i]+'</b></label>'
       +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-left:30px">'
-      +'<input type="time" id="dayS'+i+'" value="'+s1+'" title="Início da manhã" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+e1+'" title="Fim da manhã" style="width:auto;flex:0 0 auto">'
-      +'<span style="color:var(--muted);margin-left:6px">e tarde:</span> <input type="time" id="dayS2'+i+'" value="'+s2+'" title="Início da tarde (opcional)" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE2'+i+'" value="'+e2+'" title="Fim da tarde (opcional)" style="width:auto;flex:0 0 auto">'
+      +'<input type="time" id="dayS'+i+'" value="'+esc(s1)+'" title="Início da manhã" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE'+i+'" value="'+esc(e1)+'" title="Fim da manhã" style="width:auto;flex:0 0 auto">'
+      +'<span style="color:var(--muted);margin-left:6px">e tarde:</span> <input type="time" id="dayS2'+i+'" value="'+esc(s2)+'" title="Início da tarde (opcional)" style="width:auto;flex:0 0 auto"> <span style="color:var(--muted)">às</span> <input type="time" id="dayE2'+i+'" value="'+esc(e2)+'" title="Fim da tarde (opcional)" style="width:auto;flex:0 0 auto">'
       +'</div></div>';
   }).join('');
   box.innerHTML='<div class="notice info">Dias marcados com dois períodos (ex.: <b>08h–12h e 14h–18h</b>). O vão entre eles é o almoço — fica fora do agendamento. Para atender só de manhã, limpe os campos da tarde.</div>'
     +checks
-    +'<div class="row-flex" style="margin-top:14px"><div><label style="margin-top:0">Intervalo entre horários (min)</label><input type="number" id="hrSlot" value="'+cfg.slotMin+'" min="10" step="5"></div></div>'
-    +'<br><button class="btn btn-gold" onclick="saveHours()">SALVAR HORÁRIOS</button><div id="hrMsg"></div>';
+    +'<div class="row-flex" style="margin-top:14px"><div><label style="margin-top:0">Intervalo entre horários (min)</label><input type="number" id="hrSlot" value="'+esc(cfg.slotMin)+'" min="10" step="5"></div></div>'
+    +'<br><button class="btn btn-gold" onclick="saveHours()">SALVAR HORÁRIOS SEMANAIS</button><div id="hrMsg"></div>'
+    +'<div class="special-day-admin">'
+    +'<h3>Abrir ou fechar datas específicas</h3>'
+    +'<p>Use esta opção para feriados, folgas e horários especiais, sem alterar os demais dias da semana. Datas fechadas ficam bloqueadas no calendário dos clientes. Clientes podem marcar somente nos próximos 7 dias.</p>'
+    +'<label for="spDate">Data que deseja alterar</label><input type="date" id="spDate" min="'+todayISO()+'" onchange="specialDayDateChanged()">'
+    +'<label for="spAction">O que deseja fazer?</label><select id="spAction" onchange="specialDayActionChanged()">'
+    +'<option value="closed">Fechar esta data (sem atendimento)</option>'
+    +'<option value="open">Abrir esta data com horário especial</option>'
+    +'<option value="default">Voltar ao expediente semanal normal</option>'
+    +'</select>'
+    +'<div id="spHours" class="special-day-fields hidden">'
+    +'<div><label for="spS1">Abertura</label><input type="time" id="spS1"></div>'
+    +'<div><label for="spE1">Fechamento / pausa</label><input type="time" id="spE1"></div>'
+    +'<div><label for="spS2">Retorno (opcional)</label><input type="time" id="spS2"></div>'
+    +'<div><label for="spE2">Fechamento final (opcional)</label><input type="time" id="spE2"></div>'
+    +'</div>'
+    +'<div class="special-day-buttons"><button class="btn btn-gold" type="button" onclick="saveSpecialDay()">SALVAR DATA ESPECIAL</button></div>'
+    +'<div id="spMsg" class="special-day-status" role="status" aria-live="polite"></div>'
+    +'<h4 style="color:var(--gold);margin:20px 0 8px">Datas especiais cadastradas</h4>'
+    +'<div id="specialDayList"></div>'
+    +'</div>';
+  renderSpecialDayList();
 }
 async function saveHours(){
-  const H=[];
-  for(let i=0;i<7;i++){
-    H.push({
-      s1:document.getElementById('dayS'+i).value||cfg.start,
-      e1:document.getElementById('dayE'+i).value||cfg.end,
-      s2:document.getElementById('dayS2'+i).value||'',
-      e2:document.getElementById('dayE2'+i).value||''
-    });
-  }
+  if(!admOk)return;
+  const message=document.getElementById('hrMsg');
+  const H=[],days=[];
   try{
-    const fc=await dbGet('/cfg');if(fc===undefined)throw new Error('offline');
-    const fresh=fc||cfg; /* versão mais recente: só muda o que você editou AGORA */
-    fresh.days=[];
-    for(let i=0;i<7;i++)fresh.days[i]=document.getElementById('day'+i).checked;
-    fresh.hours=H;
-    fresh.slotMin=Math.max(10,parseInt(document.getElementById('hrSlot').value)||30);
-    await dbPut('/cfg',fresh);
-    cfg=fresh;
-    renderPublic();renderSlots();
-    document.getElementById('hrMsg').innerHTML='<div class="notice ok" style="margin-top:12px">Horários salvos! Já visíveis para todos os clientes.</div>';
-  }catch(e){netErr();}
+    for(let i=0;i<7;i++){
+      const isOpen=document.getElementById('day'+i).checked;
+      const h={s1:document.getElementById('dayS'+i).value,
+        e1:document.getElementById('dayE'+i).value,
+        s2:document.getElementById('dayS2'+i).value,
+        e2:document.getElementById('dayE2'+i).value};
+      if(isOpen)try{validateSpecialDayTimes(h.s1,h.e1,h.s2,h.e2);}catch(e){throw new Error(DAYS[i]+': '+e.message);}
+      days.push(isOpen);H.push(h);
+    }
+    const step=Number(document.getElementById('hrSlot').value);
+    if(!Number.isInteger(step)||step<5||step>240)
+      throw new Error('O intervalo entre horários deve ser um número inteiro de 5 a 240 minutos.');
+    const baseline=weeklyHoursBaseline;
+    await updateScheduleConfig(current=>{
+      if(scheduleWeeklySignature(current)!==baseline)
+        throw new Error('O expediente foi alterado em outro aparelho. Reabra esta aba antes de salvar para não sobrescrever horários.');
+      return {...current,days,hours:H,slotMin:step};
+    });
+    weeklyHoursBaseline=scheduleWeeklySignature(cfg);
+    message.innerHTML='<div class="notice ok" style="margin-top:12px">Expediente semanal salvo. Reservas existentes preservadas.</div>';
+    renderPublic();renderSlots();renderSpecialDayList();
+  }catch(e){message.innerHTML='<div class="notice err" style="margin-top:12px">'+esc(e.message)+'</div>';}
+}
+function specialDayActionChanged(){
+  const visible=document.getElementById('spAction').value==='open';
+  document.getElementById('spHours').classList.toggle('hidden',!visible);
+}
+function specialDayDateChanged(){
+  const date=document.getElementById('spDate').value;
+  if(!specialDayValidISO(date))return;
+  const override=cfg.dateOverrides&&cfg.dateOverrides[date];
+  specialDayBaseline=JSON.stringify(override||null);
+  const s=getScheduleForDate(date,{...cfg,dateOverrides:{}});
+  const from=override&&override.closed===false?override:null;
+  const ranges=from?rangesFromHours(from):s.ranges;
+  document.getElementById('spAction').value=override?(override.closed===true?'closed':'open'):'closed';
+  document.getElementById('spS1').value=from?from.s1:(ranges[0]?toHM(ranges[0][0]):'09:00');
+  document.getElementById('spE1').value=from?from.e1:(ranges[0]?toHM(ranges[0][1]):'18:00');
+  document.getElementById('spS2').value=from?from.s2:(ranges[1]?toHM(ranges[1][0]):'');
+  document.getElementById('spE2').value=from?from.e2:(ranges[1]?toHM(ranges[1][1]):'');
+  specialDayActionChanged();
+  document.getElementById('spMsg').textContent='';
+}
+function editSpecialDay(date){
+  const field=document.getElementById('spDate');field.value=date;
+  specialDayDateChanged();field.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderSpecialDayList(){
+  const box=document.getElementById('specialDayList');if(!box)return;
+  const overrides=cfg.dateOverrides&&typeof cfg.dateOverrides==='object'?cfg.dateOverrides:{};
+  const all=Object.keys(overrides).filter(specialDayValidISO).sort();
+  if(!all.length){box.innerHTML='<p>Nenhuma data especial cadastrada.</p>';return;}
+  const rows=all.map(date=>{
+    const o=overrides[date]||{};
+    const status=o.closed?'Fechado':'Aberto: '+[o.s1+'–'+o.e1,o.s2&&o.e2?o.s2+'–'+o.e2:''].filter(Boolean).join(' e ');
+    return '<tr><td>'+esc(date.split('-').reverse().join('/'))+'</td><td>'+esc(status)+'</td><td><button type="button" class="btn btn-outline" style="padding:7px 10px;font-size:12px" data-special-date="'+date+'" onclick="editSpecialDay(this.dataset.specialDate)">Editar</button></td></tr>';
+  });
+  box.innerHTML='<div style="overflow-x:auto"><table class="special-day-table"><tr><th>Data</th><th>Atendimento</th><th></th></tr>'+rows.join('')+'</table></div>';
+}
+async function saveSpecialDay(){
+  const box=document.getElementById('spMsg');
+  box.textContent='';
+  if(!admOk){box.textContent='Entre na área do barbeiro para alterar horários.';return;}
+  const date=document.getElementById('spDate').value;
+  const action=document.getElementById('spAction').value;
+  if(!specialDayValidISO(date)||date<todayISO()){
+    box.textContent='Escolha uma data válida a partir de hoje.';return;
+  }
+  let newRule=null;
+  if(action==='closed')newRule={closed:true};
+  else if(action==='open'){
+    newRule={closed:false,s1:document.getElementById('spS1').value,
+      e1:document.getElementById('spE1').value,s2:document.getElementById('spS2').value,
+      e2:document.getElementById('spE2').value};
+    try{validateSpecialDayTimes(newRule.s1,newRule.e1,newRule.s2,newRule.e2);}
+    catch(e){box.textContent=e.message;return;}
+  }else if(action!=='default'){box.textContent='Ação inválida.';return;}
+  if(!confirm('Confirmar alteração no atendimento de '+date.split('-').reverse().join('/')+'? Reservas existentes não serão excluídas.'))return;
+  const button=document.querySelector('.special-day-buttons button');
+  button.disabled=true;
+  try{
+    const baseline=specialDayBaseline;
+    await updateScheduleConfig(current=>{
+      const currentOverrides={...(current.dateOverrides||{})};
+      if(JSON.stringify(currentOverrides[date]||null)!==baseline)
+        throw new Error('Esta data foi alterada em outro aparelho. Selecione a data novamente antes de salvar.');
+      if(action==='default')delete currentOverrides[date];
+      else currentOverrides[date]=newRule;
+      return {...current,dateOverrides:currentOverrides};
+    });
+    if(document.getElementById('spDate').value===date)specialDayBaseline=JSON.stringify((cfg.dateOverrides||{})[date]||null);
+    box.innerHTML='<span style="color:#8cdeb0">✓ Data salva. Nenhum agendamento foi removido.</span>';
+    renderSpecialDayList();renderPublic();renderSlots();
+  }catch(e){box.innerHTML='<span style="color:#e9a5a5">'+esc(e.message)+'</span>';}
+  finally{button.disabled=false;}
 }
 
 function renderTabCfg(){
@@ -1173,54 +1767,57 @@ function renderTabCfg(){
   updateNotifBtn();
 }
 async function saveCfg(){
+  if(!admOk)return;
+  const wa=document.getElementById('cfgWa').value.replace(/\D/g,'');
+  const ig=document.getElementById('cfgIg').value.trim();
+  const np=document.getElementById('cfgPass').value;
+  if(np&&np.length<8){
+    document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">A senha deve ter ao menos 8 caracteres.</div>';
+    return;
+  }
   try{
-    const fc=await dbGet('/cfg');if(fc===undefined)throw new Error('offline');
-    const fresh=fc||cfg; /* versão mais recente do banco */
-    fresh.whatsapp=document.getElementById('cfgWa').value.replace(/\D/g,'');
-    fresh.instagram=document.getElementById('cfgIg').value.trim();
-    const np=document.getElementById('cfgPass').value;
-    if(np){if(np.length<8){document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">A senha deve ter ao menos 8 caracteres.</div>';return;}fresh.password=np;}
-    await dbPut('/cfg',fresh);
-    cfg=fresh;
+    await updateConfigETag(current=>({...current,whatsapp:wa,instagram:ig,...(np?{password:np}:{})}));
     renderPublic();
+    if(document.getElementById('cfgPass').value===np)document.getElementById('cfgPass').value='';
     document.getElementById('cfgMsg').innerHTML='<div class="notice ok" style="margin-top:12px">Configurações salvas! Já visíveis para todos os clientes.</div>';
-  }catch(e){netErr();}
+  }catch(e){
+    document.getElementById('cfgMsg').innerHTML='<div class="notice err" style="margin-top:12px">'+esc(e.message)+'</div>';
+  }
 }
 
-/* ============ INIT ============ */
-document.getElementById('bkService').addEventListener('change',renderSlots);
-boot();
-
-/* ============ ATUALIZAÇÃO AUTOMÁTICA (15 s e ao voltar à aba) ============ */
-/* Consulta novas reservas sem apagar registros antigos automaticamente. */
-let refreshingBookings=false;
+/* Atualização única para inicialização, intervalo e retorno à aba. */
+let refreshInProgress=null;
 async function refreshBookings(){
-  if(refreshingBookings)return;
-  refreshingBookings=true;
-  try{
-    const [freshBookingsResult,freshCfg,freshSv,freshLastWeek]=await Promise.all([
-      readBookingsOnly(),dbGet('/cfg'),dbGet('/services'),dbGet('/lastWeek')
-    ]);
-    if(!applyBookingRead(freshBookingsResult)){
-      if(admOk)renderTabAg(); /* aviso visível, não mostra falsamente agenda vazia */
-      showBookingStatus('⚠️ Não foi possível atualizar os horários. Confira a conexão e as regras do Firebase.');
-      return;
-    }
-    document.getElementById('bkError').innerHTML='';
-    if(freshCfg&&typeof freshCfg==='object')cfg={...cfg,...freshCfg};
-    if(freshSv){
-      const items=Array.isArray(freshSv)?freshSv:Object.values(freshSv);
-      if(items.length)services=items.filter(Boolean);
-    }
-    renderPublic();
-    lastWeekTotal=(freshLastWeek&&typeof freshLastWeek.total==='number')?freshLastWeek.total:null;
-    checkNewBk();
-    renderSlots();
-    if(admOk){renderAdmin();tentarBackupAutomaticoLocal();}
-  }finally{refreshingBookings=false;}
+  if(!refreshInProgress)refreshInProgress=loadSiteSnapshot().finally(()=>{refreshInProgress=null;});
+  return refreshInProgress;
+}
+async function loadSiteSnapshot(){
+  const hadProblem=!publicReady||bookingReadState==='error';
+  const snapshot=[agendaRevision,configRevision,servicesRevision];
+  const [freshBookings,freshCfg,freshSv,lastWeek]=await Promise.all([
+    readBookingsOnly(),dbGet('/cfg'),dbGet('/services'),dbGet('/lastWeek')
+  ]);
+  if(snapshot[0]===agendaRevision)applyBookingRead(freshBookings);
+  const configValid=snapshot[1]!==configRevision||validRemoteConfig(freshCfg);
+  const servicesValid=snapshot[2]!==servicesRevision||validServiceList(freshSv);
+  if(configValid&&snapshot[1]===configRevision)applyConfig(freshCfg);
+  if(servicesValid&&snapshot[2]===servicesRevision)services=freshSv;
+  publicReady=configValid&&servicesValid;
+  if(!publicReady||bookingReadState==='error')
+    showBookingStatus('⚠️ Não foi possível atualizar os horários. Confira a conexão e as regras do Firebase.');
+  else if(hadProblem)document.getElementById('bkError').replaceChildren();
+  renderPublic();
+  lastWeekTotal=(lastWeek&&typeof lastWeek.total==='number'&&lastWeek.week===mondayISO())?lastWeek.total:null;
+  if(bookingReadState!=='error')checkNewBk();
+  renderSlots();
+  if(admOk){renderAdmin();tentarBackupAutomaticoLocal();}
 }
 
-function mondayISO(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function mondayISO(){
+  const date=todayISO();
+  const weekday=new Date(date+'T12:00:00Z').getUTCDay();
+  return officeDatePlus(date,-((weekday+6)%7));
+}
 /* ===== notificações de novo agendamento ===== */
 let bkSeen=null;let oldOpen=false;let lastWeekTotal=null; /* histórico expandido? mantém aberto entre atualizações */
 function updateNotifBtn(){
@@ -1230,8 +1827,11 @@ function updateNotifBtn(){
   else if(Notification.permission==='denied'){b.textContent='🔔 Notificações bloqueadas (libere no navegador)';}
 }
 async function enableNotif(){
+  if(!admOk)return;
   if(!('Notification' in window))return alert('Seu navegador não suporta notificações.');
-  const p=await Notification.requestPermission();
+  let p;
+  try{p=await Notification.requestPermission();}
+  catch(e){alert('Não foi possível solicitar notificações neste navegador.');return;}
   updateNotifBtn();
   if(p==='granted')alert('Notificações ativadas! Novos agendamentos vão avisar aqui.');
   else alert('Permissão negada. Libere nas configurações do navegador (Site/Notificações).');
@@ -1249,6 +1849,8 @@ function checkNewBk(){
     try{new Notification('💈 Novo agendamento — Alfa Barbearia',{body:b.name+' — '+b.service+'\n'+b.date.split('-').reverse().join('/')+' às '+b.time+' — R$ '+Number(b.price).toFixed(2).replace('.',','),icon:'icon-192.png'});}catch(e){}
   });
 }
+document.getElementById('bkService').addEventListener('change',bookingServiceChanged);
+refreshBookings().catch(()=>showBookingStatus('⚠️ Falha ao carregar a agenda. Atualize a página.'));
 updateNotifBtn();
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 setInterval(()=>refreshBookings().catch(()=>{}),15000);
