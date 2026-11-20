@@ -343,13 +343,13 @@ td{padding:10px;border-bottom:1px solid #1e1e1e}
     <h2 class="section-title">Área do <span class="gold-text">Barbeiro</span></h2>
     <p class="section-sub">Gerencie agendamentos, serviços e horários.</p>
 
-    <form class="admin-login" id="adminLogin">
-      <label for="admPass">Senha de acesso</label>
+    <div class="admin-login" id="adminLogin">
+      <label>Senha de acesso</label>
       <input type="password" id="admPass" placeholder="Digite a senha">
       <br><br>
-      <button class="btn btn-gold" style="width:100%" type="submit">ENTRAR</button>
+      <button class="btn btn-gold" style="width:100%" onclick="adminLogin()">ENTRAR</button>
       <div id="admErr"></div>
-    </form>
+    </div>
 
     <div id="adminPanel" class="hidden">
       <div class="tabs">
@@ -766,15 +766,6 @@ async function baixarBackupLocal(id){
     avisoBackup('Download solicitado: '+b.quantidade+' registros. Confira Downloads e guarde em local privado.');
   }catch(e){avisoBackup('Falha ao baixar: '+e.message);}
 }
-async function excluirBackupLocal(id){
-  if(!admOk)return;
-  if(!confirm('Excluir esta cópia deste navegador? A agenda, o Firebase e os arquivos JSON baixados serão preservados.'))return;
-  try{
-    await executarNoBackup('readwrite',s=>s.delete(id));
-    avisoBackup('Cópia removida deste navegador.');
-  }catch(e){avisoBackup('Falha ao excluir a cópia. '+e.message);}
-  await renderBackupPanel();
-}
 async function renderBackupPanel(){
   if(!admOk)return;
   const box=document.getElementById('backupList');
@@ -793,7 +784,7 @@ async function renderBackupPanel(){
     const ultima=copias[0];
     resumo.textContent='Última cópia: '+new Date(ultima.exportedAt).toLocaleString('pt-BR')+' · '+quantidadeAtivaBackup(ultima)+' ativos · '+ultima.quantidade+' registros no total · '+copias.length+' cópia(s) guardada(s).';
     const titulo=document.createElement('p');
-    titulo.textContent='Histórico de cópias locais';
+    titulo.textContent='Histórico de cópias — cada uma pode ser baixada individualmente:';
     titulo.style.marginBottom='10px';box.appendChild(titulo);
     for(const c of copias){
       const linha=document.createElement('div');
@@ -804,11 +795,7 @@ async function renderBackupPanel(){
       const btn=document.createElement('button');btn.className='btn btn-outline';
       btn.style.cssText='font-size:13px;padding:8px 12px';btn.textContent='Baixar JSON';
       btn.onclick=()=>baixarBackupLocal(c.id);
-      const excluir=document.createElement('button');
-      excluir.type='button';excluir.className='btn btn-danger';
-      excluir.style.cssText=btn.style.cssText;excluir.textContent='Excluir cópia';
-      excluir.onclick=()=>excluirBackupLocal(c.id);
-      linha.append(label,btn,excluir);box.appendChild(linha);
+      linha.append(label,btn);box.appendChild(linha);
     }
   }catch(e){
     resumo.textContent='Não foi possível verificar as cópias neste navegador.';
@@ -1026,11 +1013,13 @@ function getBookingDayGrid(date,s){
   const isToday=date===now.date;
   const nowMin=now.minute;
   const grid=[];
+  let blockUntil=-1;
   for(const range of ranges){
     for(let t=range[0];t+dur<=range[1];t+=step){
       const hit=dayBk.some(b=>overlaps(t,t+dur,toMin(b.time),toMin(b.time)+Number(b.dur)));
       const passed=isToday&&t<=nowMin;
-      const off=hit||passed;
+      const off=hit||t<blockUntil||passed;
+      if(!off)blockUntil=t+dur;
       grid.push({t,off,hit});
     }
   }
@@ -1348,21 +1337,6 @@ function renderTabAg(){
       +'<span style="font-size:12px;color:var(--muted)">Histórico preservado (sem exclusão automática)</span></div>'
       +'<div id="oldList" style="display:'+(oldOpen?'block':'none')+'"></div>';
   }
-  /* Calcula pelo histórico disponível. Mantém o total legado como recurso para semanas sem registros. */
-  const mSeg=mondayISO();
-  const weekEnd=officeDatePlus(mSeg,7);
-  const recSem=ativos.filter(b=>b.date>=mSeg&&b.date<weekEnd&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
-  const pendSem=ativos.filter(b=>b.date>=mSeg&&b.date<weekEnd&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
-  const prevStart=officeDatePlus(mSeg,-7);
-  const previousBookings=bookings.filter(b=>b.date>=prevStart&&b.date<mSeg);
-  const previousTotal=previousBookings.length
-    ?previousBookings.filter(b=>bookingAtivo(b)&&b.done).reduce((sum,b)=>sum+(Number(b.price)||0),0)
-    :(legacyLastWeek?.week===mSeg?legacyLastWeek.total:0);
-  const weekly=bookingReadState==='loading'||readingError?'':'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
-    +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana — recebido: <b>R$ '+recSem.toFixed(2).replace('.',',')+'</b></span>'
-    +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
-    +('<span class="badge" style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">📆 Semana passada: <b style="color:var(--gold)">R$ '+previousTotal.toFixed(2).replace('.',',')+'</b></span>')
-    +'</div>';
   if(!fut.length){
     const msg=readingError
       ?'<div class="notice err"><b>Não é possível afirmar que a agenda está vazia.</b> A consulta à agenda falhou. Confira os dados no painel do banco de dados e evite novos agendamentos até corrigir a conexão ou as permissões.</div>'
@@ -1371,18 +1345,28 @@ function renderTabAg(){
       :ativos.length===0
       ?'<div class="notice info">A consulta à agenda funcionou, mas não existem agendamentos ativos. O histórico permanece preservado no banco.</div>'
       :'<div class="notice info">Não há agendamentos para hoje ou datas futuras. Existem registros antigos; use “antigos ocultos” para consultá-los.</div>';
-    box.innerHTML=diag+weekly+top+msg;
+    box.innerHTML=diag+top+msg;
     if(oldOpen&&old>0)fillOld();
     return;
   }
   const sorted=fut.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  /* Totais da semana atual, com o dado legado da semana anterior quando disponível. */
+  const mSeg=mondayISO();
+  const weekEnd=officeDatePlus(mSeg,7);
+  const recSem=ativos.filter(b=>b.date>=mSeg&&b.date<weekEnd&&b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  const pendSem=ativos.filter(b=>b.date>=mSeg&&b.date<weekEnd&&!b.done).reduce((a,b)=>a+Number(b.price||0),0);
+  top=diag+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
+    +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:14px">📅 Semana — recebido: <b>R$ '+recSem.toFixed(2).replace('.',',')+'</b></span>'
+    +(pendSem>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">⏳ A receber: R$ '+pendSem.toFixed(2).replace('.',',')+'</span>':'')
+    +(lastWeekTotal!=null?'<span class="badge" style="background:rgba(255,255,255,.06);border:1px solid #444;color:var(--muted);padding:8px 14px;border-radius:999px;font-size:14px">📆 Semana passada: <b style="color:var(--gold)">R$ '+lastWeekTotal.toFixed(2).replace('.',',')+'</b></span>':'')
+    +'</div>'+top;
   const rec={},pend={};
   sorted.forEach(b=>{const t=b.done?rec:pend;t[b.date]=(t[b.date]||0)+Number(b.price||0);});
   const totalHtml=d=>'<div style="display:flex;align-items:center;gap:8px;margin:-2px 0 10px;font-size:14px;flex-wrap:wrap">'
     +'<span class="badge" style="background:rgba(232,197,107,.12);border:1px solid var(--gold);color:var(--gold);padding:6px 14px;border-radius:999px">💰 Recebido: <b>R$ '+(rec[d]||0).toFixed(2).replace('.',',')+'</b></span>'
     +((pend[d]||0)>0?'<span class="badge" style="background:rgba(255,255,255,.05);border:1px solid #444;color:var(--muted);padding:6px 14px;border-radius:999px">⏳ A receber: R$ '+pend[d].toFixed(2).replace('.',',')+'</span>':'')
     +'</div>';
-  let html=diag+weekly+top,lastDate='';
+  let html=top,lastDate='';
   sorted.forEach(b=>{
     if(b.date!==lastDate){lastDate=b.date;const qt=quantidadePorDia[b.date]||0;html+='<h3 class="day-client-heading">📅 '+b.date.split('-').reverse().join('/')+' <span class="day-client-badge">👥 '+qt+' '+(qt===1?'cliente':'clientes')+'</span></h3>'+totalHtml(b.date);}
     const atendido=!!b.done; /* confirmado manualmente pelo barbeiro */
@@ -1813,7 +1797,7 @@ async function loadSiteSnapshot(){
   const hadProblem=!publicReady||bookingReadState==='error';
   const snapshot=[agendaRevision,configRevision,servicesRevision];
   const [freshBookings,freshCfg,freshSv,lastWeek]=await Promise.all([
-    readBookingsOnly(),dbGet('/cfg'),dbGet('/services'),admOk?dbGet('/lastWeek'):null
+    readBookingsOnly(),dbGet('/cfg'),dbGet('/services'),dbGet('/lastWeek')
   ]);
   if(snapshot[0]===agendaRevision)applyBookingRead(freshBookings);
   const configValid=snapshot[1]!==configRevision||validRemoteConfig(freshCfg);
@@ -1825,7 +1809,7 @@ async function loadSiteSnapshot(){
     showBookingStatus('⚠️ Não foi possível atualizar os horários. Confira a conexão e as regras do Firebase.');
   else if(hadProblem)document.getElementById('bkError').replaceChildren();
   renderPublic();
-  if(lastWeek!==undefined)legacyLastWeek=lastWeek&&Number.isFinite(lastWeek.total)?lastWeek:null;
+  lastWeekTotal=(lastWeek&&typeof lastWeek.total==='number'&&lastWeek.week===mondayISO())?lastWeek.total:null;
   if(bookingReadState!=='error')checkNewBk();
   renderSlots();
   if(admOk){renderAdmin();tentarBackupAutomaticoLocal();}
@@ -1837,7 +1821,7 @@ function mondayISO(){
   return officeDatePlus(date,-((weekday+6)%7));
 }
 /* ===== notificações de novo agendamento ===== */
-let bkSeen=null;let oldOpen=false;let legacyLastWeek=null; /* histórico expandido? mantém aberto entre atualizações */
+let bkSeen=null;let oldOpen=false;let lastWeekTotal=null; /* histórico expandido? mantém aberto entre atualizações */
 function updateNotifBtn(){
   const b=document.getElementById('btnNotif');if(!b)return;
   if(!('Notification' in window)){b.style.display='none';return;}
@@ -1867,10 +1851,6 @@ function checkNewBk(){
     try{new Notification('💈 Novo agendamento — Alfa Barbearia',{body:b.name+' — '+b.service+'\n'+b.date.split('-').reverse().join('/')+' às '+b.time+' — R$ '+Number(b.price).toFixed(2).replace('.',','),icon:'icon-192.png'});}catch(e){}
   });
 }
-document.getElementById('adminLogin').addEventListener('submit',event=>{
-  event.preventDefault();
-  adminLogin();
-});
 document.getElementById('bkService').addEventListener('change',bookingServiceChanged);
 refreshBookings().catch(()=>showBookingStatus('⚠️ Falha ao carregar a agenda. Atualize a página.'));
 updateNotifBtn();
